@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Local manifest for the Lumia 950 XL (cityman), LineageOS 18.1.
+     Copy to .repo/local_manifests/ and run repo sync. -->
+<manifest>
+  <project name="giannoccarol/android_device_msft_cityman" path="device/msft/cityman" remote="github" revision="lineage-18.1-cityman" />
+  <project name="giannoccarol/android_kernel_mmo_msm8994" path="kernel/mmo/msm8994" remote="github" revision="lineage-18.1-cityman-camera" />
+  <project name="giannoccarol/android_vendor_msft_cityman" path="vendor/msft/cityman" remote="github" revision="lineage-18.1-cityman" />
+  <project name="LineageOS/android_hardware_sony_timekeep" path="hardware/sony/timekeep" remote="github" revision="lineage-18.1" />
+  <project name="lakgarg/packages_apps_GoogleCamera" path="packages/apps/GoogleCamera" remote="github" revision="master" />
+
+  <!-- Same NetworkStack and Updater as the talkman manifest -->
+  <remove-project name="packages/modules/NetworkStack" />
+  <project name="Android4Lumia950/packages_modules_NetworkStack" path="packages/modules/NetworkStack" remote="github" revision="11" />
+  <remove-project name="packages/apps/Updater" />
+  <project name="Android4Lumia950/android_packages_apps_Updater" path="packages/apps/Updater" remote="github" revision="lineage-18.1" />
+</manifest>
