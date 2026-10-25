@@ -18,4 +18,9 @@
        commit. -->
   <remove-project name="LineageOS/android_vendor_apn" />
   <project name="LineageOS/android_vendor_apn" path="vendor/apn" remote="github" revision="cfcbd9d61d6c22e5b60b2f10274d6cd1ff460f5e" />
+  <!-- msm8994 display and Bluetooth HALs as built for the talkman ROM
+       (Android4Lumia950 forks of the bullhead 18.1 trees). The LineageOS
+       display tree still sets LOCAL_CLANG := false for msm8994. -->
+  <remove-project name="LineageOS/android_hardware_qcom_display" />
+  <project name="Android4Lumia950/android_hardware_qcom_display" path="hardware/qcom/display" remote="github" revision="lineage-18.1" />
 </manifest>
