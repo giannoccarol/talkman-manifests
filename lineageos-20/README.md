@@ -47,8 +47,9 @@ break on old kernels:
 Candidates, to check one by one after the first sync:
 
 - 0001 permissive user build: only while sepolicy is permissive.
-- 0006 wpa_supplicant fix (qcwcn lib printf types): needed if
-  hardware/qcom-caf/wlan breaks the build, as on libra.
+- 0006 wpa_supplicant fix (qcwcn lib printf types): **required**, the
+  qcwcn driver_cmd_nl80211.c fails with -Wformat on u64. Applied by
+  `android-cityman/build-env-l20/apply-patches.sh` after a sync.
 - 0002/0003/0004/0005/0008/0010/0011: libra product choices, not needed
   for a first boot.
 - `../lineageos-19.1/0007-remove_android_system_warn.diff`: hides the
