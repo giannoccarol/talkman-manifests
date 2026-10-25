@@ -42,4 +42,10 @@
   <remove-project path="prebuilts/bazel/darwin-x86_64" />
   <remove-project path="prebuilts/clang/host/darwin-x86" />
   <remove-project path="prebuilts/go/darwin-x86" />
+
+  <!-- LineageOS-UL still tracks the AOSP libjpeg-turbo, but external/dng_sdk
+       (LineageOS lineage-20.0, DNG SDK 1.7.1 security update of 2025-08)
+       needs the sdk variant added by the LineageOS fork (97a06ea3). -->
+  <remove-project path="external/libjpeg-turbo" />
+  <project path="external/libjpeg-turbo" name="LineageOS/android_external_libjpeg-turbo" groups="pdk" remote="github" revision="lineage-20.0" />
 </manifest>
