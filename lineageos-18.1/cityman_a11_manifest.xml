@@ -9,8 +9,8 @@
   <project name="lakgarg/packages_apps_GoogleCamera" path="packages/apps/GoogleCamera" remote="github" revision="master" />
 
   <!-- Same NetworkStack and Updater as the talkman manifest -->
-  <remove-project name="packages/modules/NetworkStack" />
+  <remove-project name="platform/packages/modules/NetworkStack" />
   <project name="Android4Lumia950/packages_modules_NetworkStack" path="packages/modules/NetworkStack" remote="github" revision="11" />
-  <remove-project name="packages/apps/Updater" />
+  <remove-project name="LineageOS/android_packages_apps_Updater" />
   <project name="Android4Lumia950/android_packages_apps_Updater" path="packages/apps/Updater" remote="github" revision="lineage-18.1" />
 </manifest>
