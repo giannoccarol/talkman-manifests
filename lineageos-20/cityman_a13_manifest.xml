@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Local manifest for the Lumia 950 XL (cityman), LineageOS 20 (Android 13).
+     SKELETON: nothing below has been synced or built yet.
+
+     Base tree: LineageOS Ultra Legacy, which carries the no-eBPF / old-kernel
+     fixes for system/bpf, system/netd, Connectivity, system/core, frameworks
+     and the legacy qcom sepolicy. repo init and repo sync commands are in
+     README.md next to this file (XML comments cannot hold double dashes).
+
+     The three giannoccarol branches named lineage-20-cityman exist only as
+     local branches today; push them before syncing from GitHub. -->
+<manifest>
+  <!-- Device, kernel, vendor -->
+  <project name="giannoccarol/android_device_msft_cityman" path="device/msft/cityman" remote="github" revision="lineage-20-cityman" />
+  <!-- lineage-20-cityman = Android4Lumia950 lineage-21.0 (eBPF, cgroup, PSI,
+       fscrypt backports, kernel version spoof) + lineage-18.1-cityman-next
+       (Wi-Fi, MBA, RIL fixes). The camera branch still has to be merged. -->
+  <project name="giannoccarol/android_kernel_mmo_msm8994" path="kernel/mmo/msm8994" remote="github" revision="lineage-20-cityman" />
+  <project name="giannoccarol/android_vendor_msft_cityman" path="vendor/msft/cityman" remote="github" revision="lineage-20-cityman" />
+
+  <!-- msm8994 HALs. vendor/lineage (UL) maps msm8992/msm8994 to
+       hardware/qcom-caf/msm8994 (QCOM_HARDWARE_VARIANT). UL has a 20.0
+       display branch for msm8994; audio and media stay on the LineageOS
+       18.1 msm8994 branches, as in the libra (MSM8992) LineageOS 20 tree. -->
+  <project name="LineageOS-UL/android_hardware_qcom_display" path="hardware/qcom-caf/msm8994/display" remote="github" revision="lineage-20.0-caf-msm8994" />
+  <project name="LineageOS/android_hardware_qcom_audio" path="hardware/qcom-caf/msm8994/audio" remote="github" revision="lineage-18.1-caf-msm8994" />
+  <project name="LineageOS/android_hardware_qcom_media" path="hardware/qcom-caf/msm8994/media" remote="github" revision="lineage-18.1-caf-msm8994" />
+
+  <!-- hardware/sony/timekeep (RTC offset, used on 18.1) is already in the
+       LineageOS-UL 20.0 manifest. -->
+
+  <!-- Dropped from the 18.1 cityman manifest:
+       - Android4Lumia950/packages_modules_NetworkStack (11): UL ships its own.
+       - Android4Lumia950/android_packages_apps_Updater: no cityman OTA server.
+       - vendor/apn pin: the 20.0 manifest has no vendor/apn project.
+       - Android4Lumia950/android_hardware_qcom_display at hardware/qcom/display:
+         replaced by the qcom-caf/msm8994 display above.
+       - lakgarg/packages_apps_GoogleCamera: add back once the rear camera
+         gives frames on Android 13. -->
+
+  <!-- Host prebuilts not needed on Linux (saves a few GB) -->
+  <remove-project path="prebuilts/bazel/darwin-x86_64" />
+  <remove-project path="prebuilts/clang/host/darwin-x86" />
+  <remove-project path="prebuilts/go/darwin-x86" />
+</manifest>
