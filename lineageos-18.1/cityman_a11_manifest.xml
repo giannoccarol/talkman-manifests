@@ -13,4 +13,9 @@
   <project name="Android4Lumia950/packages_modules_NetworkStack" path="packages/modules/NetworkStack" remote="github" revision="11" />
   <remove-project name="LineageOS/android_packages_apps_Updater" />
   <project name="Android4Lumia950/android_packages_apps_Updater" path="packages/apps/Updater" remote="github" revision="lineage-18.1" />
+  <!-- vendor/apn tracks main; a764d387 (2026-10-21) added a pyyaml host
+       tool that the 18.1 tree does not have. Pin the last 18.1-buildable
+       commit. -->
+  <remove-project name="LineageOS/android_vendor_apn" />
+  <project name="LineageOS/android_vendor_apn" path="vendor/apn" remote="github" revision="cfcbd9d61d6c22e5b60b2f10274d6cd1ff460f5e" />
 </manifest>
