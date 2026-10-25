@@ -20,8 +20,8 @@
 
   <!-- msm8994 HALs. vendor/lineage (UL) maps msm8992/msm8994 to
        hardware/qcom-caf/msm8994 (QCOM_HARDWARE_VARIANT). UL has a 20.0
-       display branch for msm8994; audio and media stay on the LineageOS
-       18.1 msm8994 branches, as in the libra (MSM8992) LineageOS 20 tree. -->
+       display branch for msm8994; media stays on the LineageOS 18.1
+       msm8994 branch, as in the libra (MSM8992) LineageOS 20 tree. -->
   <project name="LineageOS-UL/android_hardware_qcom_display" path="hardware/qcom-caf/msm8994/display" remote="github" revision="lineage-20.0-caf-msm8994" />
   <!-- Audio: no qcom-caf/msm8994/audio. The device builds the generic
        hardware/qcom/audio HAL, the one the 18.1 ROM uses. -->
