@@ -59,8 +59,8 @@
   <!-- Snapshot of 2025-04-05: LineageOS-UL forks (frameworks/base,
        telephony, art, ...) last merged LineageOS lineage-20.0 on 2025-04-04.
        Projects taken from LineageOS that build against them (apps, services,
-       providers, libcore, skia, icu, build/make) are pinned to their state
-       of that day; their later commits use framework APIs the UL forks lack.
+       providers, libcore, skia, icu, build/make) are pinned to the last first-parent commit of
+       lineage-20.0 before that day; their later commits use framework APIs the UL forks lack.
        Kept current on purpose: system/ca-certificates, system/timezone
        (data only), external/dng_sdk with the LineageOS libjpeg-turbo, webview. -->
   <extend-project name="LineageOS/android_build" revision="c9e5e990668f77c21af39c53215d2ba51e2d8b9c" /> <!-- build/make, 2025-03-06 -->
@@ -68,21 +68,21 @@
   <extend-project name="LineageOS/android_external_cldr" revision="7518f37169bd87d6977244e4d7471bc48fcd62e0" /> <!-- external/cldr, 2023-03-14 -->
   <extend-project name="LineageOS/android_external_exfatprogs" revision="e706c150ee0daddd23cad1ad1294bd42136156b7" /> <!-- external/exfatprogs, 2023-07-22 -->
   <extend-project name="LineageOS/android_external_icu" revision="39d6c39f1e67152e7022bb9a33369835c36e428d" /> <!-- external/icu, 2023-06-13 -->
-  <extend-project name="LineageOS/android_external_skia" revision="68da64c67a71978222d8e8a6b7adf83ef5c632a2" /> <!-- external/skia, 2025-02-06 -->
-  <extend-project name="LineageOS/android_libcore" revision="59b2cb7f0c05106805a1a762d9271162d51f82d4" /> <!-- libcore, 2024-10-11 -->
+  <extend-project name="LineageOS/android_external_skia" revision="b9e251f6bb79730d8267abc0cbb9961be8c8e63a" /> <!-- external/skia, 2024-12-05 -->
+  <extend-project name="LineageOS/android_libcore" revision="59b2cb7f0c05106805a1a762d9271162d51f82d4" /> <!-- libcore, 2024-10-10 -->
   <extend-project name="LineageOS/android_packages_apps_Car_Settings" revision="a1cefc66bd0fcd313b970949461054c6e608de56" /> <!-- packages/apps/Car/Settings, 2023-06-13 -->
   <extend-project name="LineageOS/android_packages_apps_Contacts" revision="fec67d7889c549e31b0c91b68c778cb179252d5e" /> <!-- packages/apps/Contacts, 2024-11-16 -->
-  <extend-project name="LineageOS/android_packages_apps_DocumentsUI" revision="5679f4aa83c419d97092b24afac93b2879c98bea" /> <!-- packages/apps/DocumentsUI, 2025-02-06 -->
+  <extend-project name="LineageOS/android_packages_apps_DocumentsUI" revision="24d4c6cb5f324106407389a8bdccbda2845f9ec8" /> <!-- packages/apps/DocumentsUI, 2024-12-05 -->
   <extend-project name="LineageOS/android_packages_apps_KeyChain" revision="d90f056762b0390f0c1a9823af51894f14a9f746" /> <!-- packages/apps/KeyChain, 2023-11-12 -->
-  <extend-project name="LineageOS/android_packages_apps_Settings" revision="21f7e30872c8314984302c3ec502a9c271dc58ad" /> <!-- packages/apps/Settings, 2025-03-12 -->
+  <extend-project name="LineageOS/android_packages_apps_Settings" revision="823af438e1ebca33ec8fd601a124f14831430e7d" /> <!-- packages/apps/Settings, 2025-02-07 -->
   <extend-project name="LineageOS/android_packages_apps_Trebuchet" revision="1273734a5f484a30dafa5aaecda49f0635b24672" /> <!-- packages/apps/Trebuchet, 2024-12-02 -->
   <extend-project name="LineageOS/android_packages_apps_TvSettings" revision="82d09fbb7635d4eaf4496925768697f272614abc" /> <!-- packages/apps/TvSettings, 2024-03-28 -->
-  <extend-project name="LineageOS/android_packages_modules_Permission" revision="3a2d7f3eac266a9a393d46ad37ac1c4bf3034d9d" /> <!-- packages/modules/Permission, 2025-03-12 -->
+  <extend-project name="LineageOS/android_packages_modules_Permission" revision="f861ce16689dcd1daa6aeae7ebc9afa1b5e86b71" /> <!-- packages/modules/Permission, 2024-12-05 -->
   <extend-project name="LineageOS/android_packages_providers_DownloadProvider" revision="d280de9f4e600e36728172e70aca20a2a10a84c6" /> <!-- packages/providers/DownloadProvider, 2025-03-06 -->
-  <extend-project name="LineageOS/android_packages_providers_MediaProvider" revision="0b1bc4aca4ee204acea5391a240a84c63e799c13" /> <!-- packages/providers/MediaProvider, 2025-02-06 -->
+  <extend-project name="LineageOS/android_packages_providers_MediaProvider" revision="7f7a5d07ae84bc684ee15fbf7f7ac1e65b506635" /> <!-- packages/providers/MediaProvider, 2024-11-08 -->
   <extend-project name="LineageOS/android_packages_providers_TelephonyProvider" revision="64aa1787b56d1e9b03bcd18dc652aa7a395c4db0" /> <!-- packages/providers/TelephonyProvider, 2023-11-09 -->
   <extend-project name="LineageOS/android_packages_services_Mms" revision="0cc94f1ad63e6a821888784dd1c5aa945f2c4202" /> <!-- packages/services/Mms, 2024-12-02 -->
-  <extend-project name="LineageOS/android_packages_services_Telephony" revision="b0cd97fc7880e1ad7acfab57e79e55aa06dd07dc" /> <!-- packages/services/Telephony, 2025-02-06 -->
+  <extend-project name="LineageOS/android_packages_services_Telephony" revision="f1e9284296c768b6a537d8c07a186c044ee7a678" /> <!-- packages/services/Telephony, 2025-01-06 -->
   <extend-project name="LineageOS/android_packages_services_Telecomm" revision="9a5dcfc014ff51677cb0129f8f572def4f595b17" /> <!-- packages/services/Telecomm, 2025-03-06 -->
-  <extend-project name="LineageOS/android_system_libfmq" revision="87febc318fe8132a9d9feb01c7197ae07777a5c8" /> <!-- system/libfmq, 2024-06-05 -->
+  <extend-project name="LineageOS/android_system_libfmq" revision="87febc318fe8132a9d9feb01c7197ae07777a5c8" /> <!-- system/libfmq, 2024-06-04 -->
 </manifest>
