@@ -49,4 +49,10 @@
        needs the sdk variant added by the LineageOS fork (97a06ea3). -->
   <remove-project path="external/libjpeg-turbo" />
   <project path="external/libjpeg-turbo" name="LineageOS/android_external_libjpeg-turbo" groups="pdk" remote="github" revision="lineage-20.0" />
+
+  <!-- LineageOS lineage-20.0 ContactsProvider 0b0bbfa (2026-05, SQL injection
+       fix) needs SQLiteTokenizer.OPTION_CHECK_BRACKETS, which the
+       LineageOS-UL frameworks/base does not have. Pin the commit before it. -->
+  <remove-project path="packages/providers/ContactsProvider" />
+  <project path="packages/providers/ContactsProvider" name="LineageOS/android_packages_providers_ContactsProvider" groups="pdk-cw-fs,pdk-fs" remote="github" revision="5a9f9dd528a2861342f0be16dc5d600ae7b76f80" />
 </manifest>
