@@ -58,3 +58,17 @@ Candidates, to check one by one after the first sync:
   "internal problem with your device" dialog that `Build.isBuildConsistent()`
   shows when system and vendor fingerprints differ; check that it still
   applies to frameworks/base 20.
+
+## Our patches (applied by `android-cityman/build-env-l20/apply-patches.sh`)
+
+- `0001-frameworks-av-camera-parcels-android13.diff`: LineageOS-UL reverts
+  libcameraservice to Android 12 ("massive revert to Android 12 state",
+  `LineageOS-UL/android_frameworks_av` `3c5a4f2cf5`, for HAL1 devices), but
+  keeps the Android 13 Java framework. The parcel layouts of
+  `OutputConfiguration`, `CaptureRequest` and `CameraSessionStats` no longer
+  match, so every Camera2/CameraX `createStream` fails with
+  `BadParcelableException: Parcel data not fully consumed, unread size: 24`.
+  The patch reads and drops the Android 13 fields the framework sends and
+  writes default values where the service replies, without restoring the
+  Android 13 features.
+
