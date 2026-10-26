@@ -44,11 +44,6 @@
   <remove-project path="prebuilts/clang/host/darwin-x86" />
   <remove-project path="prebuilts/go/darwin-x86" />
 
-  <!-- LineageOS-UL still tracks the AOSP libjpeg-turbo, but external/dng_sdk
-       (LineageOS lineage-20.0, DNG SDK 1.7.1 security update of 2025-08)
-       needs the sdk variant added by the LineageOS fork (97a06ea3). -->
-  <remove-project path="external/libjpeg-turbo" />
-  <project path="external/libjpeg-turbo" name="LineageOS/android_external_libjpeg-turbo" groups="pdk" remote="github" revision="lineage-20.0" />
 
   <!-- LineageOS lineage-20.0 ContactsProvider 0b0bbfa (2026-05, SQL injection
        fix) needs SQLiteTokenizer.OPTION_CHECK_BRACKETS, which the
@@ -62,12 +57,15 @@
        providers, libcore, skia, icu, build/make) are pinned to the last first-parent commit of
        lineage-20.0 before that day; their later commits use framework APIs the UL forks lack.
        Kept current on purpose: system/ca-certificates, system/timezone
-       (data only), external/dng_sdk with the LineageOS libjpeg-turbo, webview. -->
+       (data only) and the WebView. external/dng_sdk is pinned too: its DNG SDK
+       1.7.1 update needs the LineageOS libjpeg-turbo and drops the Windows
+       variant the 2024 skia links. -->
   <extend-project name="LineageOS/android_build" revision="c9e5e990668f77c21af39c53215d2ba51e2d8b9c" /> <!-- build/make, 2025-03-06 -->
   <extend-project name="LineageOS/android_development" revision="4b3ea0e9150e3da664e0a279ae1036f691751383" /> <!-- development, 2023-07-14 -->
   <extend-project name="LineageOS/android_external_cldr" revision="7518f37169bd87d6977244e4d7471bc48fcd62e0" /> <!-- external/cldr, 2023-03-14 -->
   <extend-project name="LineageOS/android_external_exfatprogs" revision="e706c150ee0daddd23cad1ad1294bd42136156b7" /> <!-- external/exfatprogs, 2023-07-22 -->
   <extend-project name="LineageOS/android_external_icu" revision="39d6c39f1e67152e7022bb9a33369835c36e428d" /> <!-- external/icu, 2023-06-13 -->
+  <extend-project name="LineageOS/android_external_dng_sdk" revision="b310a99799e4d7c014687632ba145bffb374ed31" /> <!-- external/dng_sdk, 2025-03-06 -->
   <extend-project name="LineageOS/android_external_skia" revision="b9e251f6bb79730d8267abc0cbb9961be8c8e63a" /> <!-- external/skia, 2024-12-05 -->
   <extend-project name="LineageOS/android_libcore" revision="59b2cb7f0c05106805a1a762d9271162d51f82d4" /> <!-- libcore, 2024-10-10 -->
   <extend-project name="LineageOS/android_packages_apps_Car_Settings" revision="a1cefc66bd0fcd313b970949461054c6e608de56" /> <!-- packages/apps/Car/Settings, 2023-06-13 -->
