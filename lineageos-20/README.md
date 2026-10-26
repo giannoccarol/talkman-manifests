@@ -1,7 +1,8 @@
-# cityman — LineageOS 20 (Android 13) manifest skeleton
+# cityman — LineageOS 20 (Android 13) manifest
 
-Status: skeleton only. Not synced against, not built. Full plan:
-`ANDROID13-CITYMAN-PLAN.md` in the project folder.
+Status: the first build booted to the launcher on 2026-10-26; the hardware
+is still being checked. Build with `lunch lineage_cityman-userdebug` and
+`m bacon`.
 
 ## Base
 
@@ -30,17 +31,18 @@ break on old kernels:
 
 | Path | 18.1 | 20 |
 |---|---|---|
-| device/msft/cityman | lineage-18.1-cityman | lineage-20-cityman (local branch, not pushed) |
-| kernel/mmo/msm8994 | lineage-18.1-cityman-camera | lineage-20-cityman (21.0 + next merge, local, not pushed) |
-| vendor/msft/cityman | lineage-18.1-cityman | lineage-20-cityman (local branch, not pushed) |
+| device/msft/cityman | lineage-18.1-cityman | lineage-20-cityman |
+| kernel/mmo/msm8994 | lineage-18.1-cityman-camera | lineage-20-cityman (Android4Lumia950 lineage-21.0 + the cityman ROM kernel) |
+| vendor/msft/cityman | lineage-18.1-cityman | lineage-20-cityman |
 | hardware/qcom/display | Android4Lumia950 lineage-18.1 | removed; replaced by hardware/qcom-caf/msm8994/display (UL) |
-| hardware/qcom-caf/msm8994/audio | (not used) | LineageOS lineage-18.1-caf-msm8994 |
+| hardware/qcom-caf/msm8994/audio | (not used) | not used: the device builds the generic hardware/qcom/audio HAL, as on 18.1 |
 | hardware/qcom-caf/msm8994/media | (not used) | LineageOS lineage-18.1-caf-msm8994 |
 | hardware/sony/timekeep | lineage-18.1 (local manifest) | lineage-20, already in the UL manifest |
 | packages/modules/NetworkStack | Android4Lumia950 "11" | UL default |
 | packages/apps/Updater | Android4Lumia950 lineage-18.1 | LineageOS default |
 | vendor/apn | pinned commit | no such project in 20.0 |
 | packages/apps/GoogleCamera | lakgarg master | dropped for now |
+| external/libjpeg-turbo, external/dng_sdk, 22 apps/services/libraries | LineageOS heads | pinned to the 2025-04-05 snapshot (see the manifest) |
 
 ## Patches from `../lineageos-20-ul/` (libra LineageOS 20)
 

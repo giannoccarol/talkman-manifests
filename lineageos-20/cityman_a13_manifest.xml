@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Local manifest for the Lumia 950 XL (cityman), LineageOS 20 (Android 13).
-     SKELETON: nothing below has been synced or built yet.
+     Built and booted to the launcher on 2026-10-26 (first build); hardware
+     still being checked.
 
      Base tree: LineageOS Ultra Legacy, which carries the no-eBPF / old-kernel
      fixes for system/bpf, system/netd, Connectivity, system/core, frameworks
      and the legacy qcom sepolicy. repo init and repo sync commands are in
      README.md next to this file (XML comments cannot hold double dashes).
 
-     The three giannoccarol branches named lineage-20-cityman exist only as
-     local branches today; push them before syncing from GitHub. -->
+     The device, kernel and vendor projects use the giannoccarol branches
+     named lineage-20-cityman. After a sync, apply the patches listed in
+     README.md (0006-wpa_supplicant_fix.diff). -->
 <manifest>
   <!-- Device, kernel, vendor -->
   <project name="giannoccarol/android_device_msft_cityman" path="device/msft/cityman" remote="github" revision="lineage-20-cityman" />
