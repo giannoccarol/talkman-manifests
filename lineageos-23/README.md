@@ -14,6 +14,7 @@ cp cityman_a16_manifest.xml .repo/local_manifests/
 repo sync -c -j8 --no-clone-bundle --no-tags
 /path/to/this/dir/apply-patches.sh "$PWD"
 source build/envsetup.sh
+export WITH_ADB_INSECURE=true   # adb and logcat on the first boots
 lunch lineage_cityman-bp4a-userdebug
 m bacon
 ```
@@ -42,6 +43,7 @@ LineageOS 23.2 plus:
 | build/soong/0001 | `SOONG_GOMEMLIMIT`/`SOONG_GOGC` reach `soong_build` (memory-bounded analysis) |
 | hardware/qcom-caf/msm8994/display/0001 | define `PAGE_SIZE` when bionic does not (`__BIONIC_NO_PAGE_SIZE_MACRO`) |
 | frameworks/base/0001 | app compaction off by default: the 3.10 kernel has no `process_madvise` |
+| frameworks/base/0002 | cached processes can be killed right after boot (3 GB device) |
 
 ## Credits
 

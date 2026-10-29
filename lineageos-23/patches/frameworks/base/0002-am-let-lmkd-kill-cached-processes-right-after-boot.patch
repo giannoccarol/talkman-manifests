@@ -1,0 +1,35 @@
+From c8b8e49cf37779614f51cc8b2ea20efd6bc6b9a4 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Thu, 29 Oct 2026 13:16:19 +0100
+Subject: [PATCH] am: let lmkd kill cached processes right after boot
+
+On a 3 GB device the boot and the first minutes after unlock are when
+memory pressure is highest; keeping every cached process alive for ten
+minutes defeats the cached process limit.
+
+Change-Id: I001f4db6e221b81e76a42623744570aa1fedc0c4
+---
+ .../java/com/android/server/am/ActivityManagerConstants.java  | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/services/core/java/com/android/server/am/ActivityManagerConstants.java b/services/core/java/com/android/server/am/ActivityManagerConstants.java
+index e639fd49a..681ce5e02 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerConstants.java
++++ b/services/core/java/com/android/server/am/ActivityManagerConstants.java
+@@ -912,11 +912,11 @@ final class ActivityManagerConstants extends ContentObserver {
+             "no_kill_cached_processes_post_boot_completed_duration_millis";
+ 
+     /** @see #mNoKillCachedProcessesUntilBootCompleted */
+-    private static final boolean DEFAULT_NO_KILL_CACHED_PROCESSES_UNTIL_BOOT_COMPLETED = true;
++    private static final boolean DEFAULT_NO_KILL_CACHED_PROCESSES_UNTIL_BOOT_COMPLETED = false;
+ 
+     /** @see #mNoKillCachedProcessesPostBootCompletedDurationMillis */
+     private static final long
+-            DEFAULT_NO_KILL_CACHED_PROCESSES_POST_BOOT_COMPLETED_DURATION_MILLIS = 600_000;
++            DEFAULT_NO_KILL_CACHED_PROCESSES_POST_BOOT_COMPLETED_DURATION_MILLIS = 0;
+ 
+     /**
+      * If true, do not kill excessive cached processes proactively, until user-0 is unlocked.
+-- 
+2.56.0
+
