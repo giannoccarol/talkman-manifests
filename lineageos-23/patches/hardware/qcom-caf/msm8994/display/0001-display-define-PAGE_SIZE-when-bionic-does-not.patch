@@ -1,0 +1,122 @@
+From b4873ff0f52bd6119f9218c0acd0dab47932c191 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <>
+Date: Wed, 28 Oct 2026 21:07:23 +0100
+Subject: [PATCH] display: define PAGE_SIZE when bionic does not
+
+Android 15 and later build vendor code with __BIONIC_NO_PAGE_SIZE_MACRO.
+The msm8994 kernel uses 4 KiB pages; provide the macro where the legacy
+display HAL needs it.
+---
+ libgralloc/gr.h               | 6 ++++++
+ libgralloc/gralloc_priv.h     | 6 ++++++
+ libhdmi/hdmi.cpp              | 6 ++++++
+ libhwcomposer/hwc_uevents.cpp | 6 ++++++
+ libqdutils/display_config.cpp | 6 ++++++
+ libqdutils/mdp_version.cpp    | 6 ++++++
+ 6 files changed, 36 insertions(+)
+
+diff --git a/libgralloc/gr.h b/libgralloc/gr.h
+index 5dece9e..8171763 100644
+--- a/libgralloc/gr.h
++++ b/libgralloc/gr.h
+@@ -29,6 +29,12 @@
+ #include <utils/Singleton.h>
+ #include "adreno_utils.h"
+ 
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
++
+ /*****************************************************************************/
+ 
+ struct private_module_t;
+diff --git a/libgralloc/gralloc_priv.h b/libgralloc/gralloc_priv.h
+index 0080230..05aca67 100755
+--- a/libgralloc/gralloc_priv.h
++++ b/libgralloc/gralloc_priv.h
+@@ -30,6 +30,12 @@
+ 
+ #include <cutils/log.h>
+ 
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
++
+ #define ROUND_UP_PAGESIZE(x) ( (((unsigned long)(x)) + PAGE_SIZE-1)  & \
+                                (~(PAGE_SIZE-1)) )
+ 
+diff --git a/libhdmi/hdmi.cpp b/libhdmi/hdmi.cpp
+index 33cb42a..a206207 100644
+--- a/libhdmi/hdmi.cpp
++++ b/libhdmi/hdmi.cpp
+@@ -30,6 +30,12 @@
+ #include "overlay.h"
+ #include "qd_utils.h"
+ 
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
++
+ using namespace android;
+ using namespace qdutils;
+ 
+diff --git a/libhwcomposer/hwc_uevents.cpp b/libhwcomposer/hwc_uevents.cpp
+index c9a12a9..8b3c2d7 100644
+--- a/libhwcomposer/hwc_uevents.cpp
++++ b/libhwcomposer/hwc_uevents.cpp
+@@ -33,6 +33,12 @@
+ #include "hdmi.h"
+ #include "hwc_virtual.h"
+ #include "mdp_version.h"
++
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
+ using namespace overlay;
+ namespace qhwc {
+ #define HWC_UEVENT_SWITCH_STR  "change@/devices/virtual/switch/"
+diff --git a/libqdutils/display_config.cpp b/libqdutils/display_config.cpp
+index 07c89fc..8e98dd0 100644
+--- a/libqdutils/display_config.cpp
++++ b/libqdutils/display_config.cpp
+@@ -36,6 +36,12 @@
+ #include <QServiceUtils.h>
+ #include <qd_utils.h>
+ 
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
++
+ using namespace android;
+ using namespace qService;
+ 
+diff --git a/libqdutils/mdp_version.cpp b/libqdutils/mdp_version.cpp
+index 0e21fa6..9c7c847 100644
+--- a/libqdutils/mdp_version.cpp
++++ b/libqdutils/mdp_version.cpp
+@@ -32,6 +32,12 @@
+ #include "mdp_version.h"
+ #include "qd_utils.h"
+ 
++/* Android 15+ builds vendor code without bionic's PAGE_SIZE macro; the
++ * msm8994 kernel uses 4 KiB pages. */
++#ifndef PAGE_SIZE
++#define PAGE_SIZE 4096
++#endif
++
+ #define DEBUG 0
+ 
+ ANDROID_SINGLETON_STATIC_INSTANCE(qdutils::MDPVersion);
+-- 
+2.56.0
+

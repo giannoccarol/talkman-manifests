@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Local manifest for the Lumia 950 XL (cityman), LineageOS 23.2 (Android 16 QPR2).
+     Base: repo init -u https://github.com/LineageOS/android.git -b lineage-23.2
+     msm8994 HALs: davigamer987 (OnePlus 2 Android 16 port).
+     Legacy kernel support: Ultra-Legacy-Hippeastrum legacy_support_patches,
+     applied with ./apply-patches.sh after every sync. -->
+<manifest>
+  <remote name="github" fetch="https://github.com/" />
+
+  <project name="giannoccarol/android_device_msft_cityman" path="device/msft/cityman" remote="github" revision="lineage-23-cityman" />
+  <!-- lineage-23-cityman = lineage-20-cityman + eBPF/binder/process_mrelease
+       backports from xiaomi-classic-dev (leo) + /proc/vmstat totals for lmkd. -->
+  <project name="giannoccarol/android_kernel_mmo_msm8994" path="kernel/mmo/msm8994" remote="github" revision="lineage-23-cityman" />
+  <project name="giannoccarol/android_vendor_msft_cityman" path="vendor/msft/cityman" remote="github" revision="lineage-23-cityman" />
+
+  <project name="davigamer987/hardware_qcom_display" path="hardware/qcom-caf/msm8994/display" remote="github" revision="lineage-23.0-caf-msm8994" />
+  <project name="davigamer987/hardware_qcom_audio" path="hardware/qcom-caf/msm8994/audio" remote="github" revision="lineage-23.0-caf-msm8994" />
+  <project name="davigamer987/hardware_qcom_media" path="hardware/qcom-caf/msm8994/media" remote="github" revision="lineage-23.0-caf-msm8994" />
+  <project name="LineageOS/android_hardware_sony_timekeep" path="hardware/sony/timekeep" remote="github" revision="lineage-23.2" />
+  <project name="Ultra-Legacy-Hippeastrum/legacy_support_patches" path="legacy_support_patches" remote="github" revision="lineage-23.2" />
+  <project name="Ultra-Legacy-Hippeastrum/android_device_qcom_sepolicy" path="device/qcom/sepolicy-legacy" remote="github" revision="lineage-23.2-legacy" />
+
+  <!-- Generic QCOM audio HAL (audio.primary.msm8992), the kind the cityman 18.1/20
+       ROMs run their speaker with; LineageOS 23.2 keeps only the AOSP stub here. -->
+  <remove-project name="LineageOS/android_hardware_qcom_audio" />
+  <project name="LineageOS-UL/android_hardware_qcom_audio" path="hardware/qcom/audio" remote="github" revision="lineage-21.0" />
+  <!-- msm8994 GPS HAL: gone from LineageOS after 21.0. -->
+  <project name="LineageOS-UL/android_hardware_qcom_gps" path="hardware/qcom/gps" remote="github" revision="lineage-21.0" />
+</manifest>

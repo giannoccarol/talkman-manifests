@@ -1,0 +1,34 @@
+From f20ee5c2086d32028f767ef6958743ec485ceb71 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <>
+Date: Wed, 28 Oct 2026 16:08:25 +0100
+Subject: [PATCH] soong: allow bounding the soong_build Go heap
+
+Pass SOONG_GOMEMLIMIT and SOONG_GOGC to soong_build as GOMEMLIMIT and
+GOGC, so the analysis can run on hosts with little free memory.
+
+Change-Id: Ie44256fc4c8d60157ed91f665a360eafb550d4b1
+---
+ ui/build/soong.go | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/ui/build/soong.go b/ui/build/soong.go
+index c9b303c..0d2cde9 100644
+--- a/ui/build/soong.go
++++ b/ui/build/soong.go
+@@ -226,6 +226,13 @@ func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstra
+ 
+ 	commonArgs = append(commonArgs, "-l", filepath.Join(pb.config.FileListDir(), "Android.bp.list"))
+ 	invocationEnv := make(map[string]string)
++	// Memory-constrained hosts: let the caller bound the Go heap of soong_build.
++	if v := os.Getenv("SOONG_GOMEMLIMIT"); v != "" {
++		invocationEnv["GOMEMLIMIT"] = v
++	}
++	if v := os.Getenv("SOONG_GOGC"); v != "" {
++		invocationEnv["GOGC"] = v
++	}
+ 	if pb.debugPort != "" {
+ 		//debug mode
+ 		commonArgs = append(commonArgs, "--delve_listen", pb.debugPort,
+-- 
+2.56.0
+

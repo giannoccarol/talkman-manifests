@@ -1,0 +1,29 @@
+From d2f6d934b19d9ff7ba00fc9d08daa4470b64f677 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Thu, 29 Oct 2026 12:41:43 +0100
+Subject: [PATCH] am: disable app compaction by default
+
+Legacy kernels have no process_madvise(): every compaction attempt reads
+/proc/<pid>/maps and then fails with ENOSYS.
+
+Change-Id: I586e547c1c5b0d9b00b07a06a29ed3ccb874c856
+---
+ .../core/java/com/android/server/am/CachedAppOptimizer.java     | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/am/CachedAppOptimizer.java b/services/core/java/com/android/server/am/CachedAppOptimizer.java
+index 0ec502f9c..bbe66284a 100644
+--- a/services/core/java/com/android/server/am/CachedAppOptimizer.java
++++ b/services/core/java/com/android/server/am/CachedAppOptimizer.java
+@@ -273,7 +273,7 @@ public class CachedAppOptimizer {
+     @VisibleForTesting static final boolean ENABLE_SHARED_AND_CODE_COMPACT = false;
+ 
+     // Defaults for phenotype flags.
+-    @VisibleForTesting static final boolean DEFAULT_USE_COMPACTION = true;
++    @VisibleForTesting static final boolean DEFAULT_USE_COMPACTION = false;
+     @VisibleForTesting static final boolean DEFAULT_USE_FREEZER = true;
+     @VisibleForTesting static final long DEFAULT_COMPACT_THROTTLE_1 = 5_000;
+     @VisibleForTesting static final long DEFAULT_COMPACT_THROTTLE_2 = 10_000;
+-- 
+2.56.0
+
