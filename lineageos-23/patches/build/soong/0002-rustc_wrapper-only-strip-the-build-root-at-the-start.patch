@@ -1,0 +1,34 @@
+From 13345fde5f358cd6376d5d0443035c95e30d39a3 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <>
+Date: Thu, 29 Oct 2026 22:58:54 +0100
+Subject: [PATCH] rustc_wrapper: only strip the build root at the start of a
+ path
+
+The dep-info cleanup replaced every "$PWD/" in the file. With the tree
+at /src this also removed "/src/" inside paths (aconfig/src/main.rs
+became aconfigmain.rs), so ninja saw missing inputs on every run and
+rebuilt aconfig and everything generated from it.
+
+Change-Id: If08e68465af8cd3fccbccbf028b305c21cf0cc30
+---
+ scripts/rustc_wrapper.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/rustc_wrapper.sh b/scripts/rustc_wrapper.sh
+index 6a24924..d634a80 100644
+--- a/scripts/rustc_wrapper.sh
++++ b/scripts/rustc_wrapper.sh
+@@ -56,7 +56,9 @@ while [[ "$#" -gt 0 ]]; do
+ 
+                 # Absolute paths from include! macros (and similar) can cause a mismatch between
+                 # RBE and local dep info files, so strip out $ANDROID_BUILD_TOP
+-                sed -i -e "s|`pwd`/||g" $deps_file
++                # Only strip it where a path starts: a bare "s|$PWD/||g" also eats
++                # "/src/" inside paths when the tree lives at /src.
++                sed -i -e "s#\(^\| \)`pwd`/#\1#g" $deps_file
+                 break
+             else
+               shift 2
+-- 
+2.56.0
+
