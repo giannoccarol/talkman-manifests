@@ -1,60 +1,117 @@
-From 1b82796b82e02dce8d7b0a49b33df629601dc1ca Mon Sep 17 00:00:00 2001
+From dc83279d53ad23e06f1a130b182111b28d733e39 Mon Sep 17 00:00:00 2001
 From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
 Date: Fri, 30 Oct 2026 15:53:50 +0100
 Subject: [PATCH] gps: msm8994: build the HAL and its libraries for vendor
 
 The GNSS HIDL service runs on vendor and can no longer load
-gps.<platform> and its dependencies from /system on Android 16.
+gps.<platform> and its dependencies from /system on Android 16. As
+vendor modules they also need libhardware_headers explicitly for
+hardware/gps.h.
 ---
- msm8994/core/Android.mk                     | 1 +
- msm8994/loc_api/libloc_api_50001/Android.mk | 2 ++
- msm8994/utils/Android.mk                    | 1 +
- 3 files changed, 4 insertions(+)
+ msm8994/core/Android.mk                     | 5 ++++-
+ msm8994/loc_api/libloc_api_50001/Android.mk | 9 +++++++--
+ msm8994/utils/Android.mk                    | 3 +++
+ 3 files changed, 14 insertions(+), 3 deletions(-)
 
 diff --git a/msm8994/core/Android.mk b/msm8994/core/Android.mk
-index 11b8388..9cdda61 100644
+index 11b8388..998c6fc 100644
 --- a/msm8994/core/Android.mk
 +++ b/msm8994/core/Android.mk
-@@ -6,6 +6,7 @@ LOCAL_PATH := $(call my-dir)
+@@ -6,6 +6,8 @@ LOCAL_PATH := $(call my-dir)
  include $(CLEAR_VARS)
  
  LOCAL_MODULE := libloc_core
 +LOCAL_VENDOR_MODULE := true
++LOCAL_HEADER_LIBRARIES += libhardware_headers
  LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
  LOCAL_LICENSE_CONDITIONS := notice
  LOCAL_MODULE_OWNER := qcom
+@@ -40,7 +42,7 @@ LOCAL_CFLAGS += \
+      -Wno-unused-parameter \
+      -Wno-error \
+ 
+-LOCAL_HEADER_LIBRARIES := gps_utils_headers
++LOCAL_HEADER_LIBRARIES += gps_utils_headers
+ 
+ LOCAL_PRELINK_MODULE := false
+ 
+@@ -48,6 +50,7 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ include $(CLEAR_VARS)
+ LOCAL_MODULE := libloc_core_headers
++LOCAL_VENDOR_MODULE := true
+ LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+ include $(BUILD_HEADER_LIBRARY)
+ 
 diff --git a/msm8994/loc_api/libloc_api_50001/Android.mk b/msm8994/loc_api/libloc_api_50001/Android.mk
-index 2a715e0..e435c5e 100644
+index 2a715e0..dd3fff9 100644
 --- a/msm8994/loc_api/libloc_api_50001/Android.mk
 +++ b/msm8994/loc_api/libloc_api_50001/Android.mk
-@@ -6,6 +6,7 @@ LOCAL_PATH := $(call my-dir)
+@@ -6,6 +6,8 @@ LOCAL_PATH := $(call my-dir)
  include $(CLEAR_VARS)
  
  LOCAL_MODULE := libloc_eng
 +LOCAL_VENDOR_MODULE := true
++LOCAL_HEADER_LIBRARIES += libhardware_headers
  LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
  LOCAL_LICENSE_CONDITIONS := notice
  LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../NOTICE
-@@ -54,6 +55,7 @@ include $(BUILD_SHARED_LIBRARY)
+@@ -44,7 +46,7 @@ LOCAL_CFLAGS += \
+      -Wno-unused-parameter \
+      -Wno-error \
+ 
+-LOCAL_HEADER_LIBRARIES := gps_utils_headers
++LOCAL_HEADER_LIBRARIES += gps_utils_headers
+ LOCAL_HEADER_LIBRARIES += libloc_core_headers
+ 
+ LOCAL_PRELINK_MODULE := false
+@@ -54,6 +56,8 @@ include $(BUILD_SHARED_LIBRARY)
  include $(CLEAR_VARS)
  
  LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 +LOCAL_VENDOR_MODULE := true
++LOCAL_HEADER_LIBRARIES += libhardware_headers
  LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
  LOCAL_LICENSE_CONDITIONS := notice
  LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../NOTICE
+@@ -91,7 +95,7 @@ endif
+ 
+ ## Includes
+ 
+-LOCAL_HEADER_LIBRARIES := gps_utils_headers
++LOCAL_HEADER_LIBRARIES += gps_utils_headers
+ LOCAL_HEADER_LIBRARIES += libloc_core_headers
+ 
+ LOCAL_PRELINK_MODULE := false
+@@ -101,6 +105,7 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ include $(CLEAR_VARS)
+ LOCAL_MODULE := libloc_eng_headers
++LOCAL_VENDOR_MODULE := true
+ LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+ include $(BUILD_HEADER_LIBRARY)
+ 
 diff --git a/msm8994/utils/Android.mk b/msm8994/utils/Android.mk
-index 3e14b9c..a274e30 100644
+index 3e14b9c..2dad078 100644
 --- a/msm8994/utils/Android.mk
 +++ b/msm8994/utils/Android.mk
-@@ -38,6 +38,7 @@ LOCAL_C_INCLUDES:= \
+@@ -38,6 +38,8 @@ LOCAL_C_INCLUDES:= \
      $(LOCAL_PATH)/../platform_lib_abstractions
  
  LOCAL_MODULE := libgps.utils
 +LOCAL_VENDOR_MODULE := true
++LOCAL_HEADER_LIBRARIES += libhardware_headers
  LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
  LOCAL_LICENSE_CONDITIONS := notice
  
+@@ -49,6 +51,7 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ include $(CLEAR_VARS)
+ LOCAL_MODULE := gps_utils_headers
++LOCAL_VENDOR_MODULE := true
+ LOCAL_EXPORT_C_INCLUDE_DIRS := \
+     $(LOCAL_PATH) \
+     $(LOCAL_PATH)/../platform_lib_abstractions
 -- 
 2.56.0
 
