@@ -44,6 +44,7 @@ LineageOS 23.2 plus:
 | build/soong/0002 | `rustc_wrapper.sh` strips the build root only at the start of a path; with the tree at `/src` it also cut `/src/` inside paths and every build rebuilt aconfig and its outputs |
 | hardware/qcom-caf/msm8994/display/0001 | define `PAGE_SIZE` when bionic does not (`__BIONIC_NO_PAGE_SIZE_MACRO`) |
 | hardware/qcom/gps/0001 | the msm8994 GPS HAL (`gps.<platform>`, `libloc_eng`, `libloc_core`, `libgps.utils`) is built for vendor: the GNSS service runs on vendor and cannot load them from /system on Android 16 |
+| hardware/interfaces/0001 | with `ro.vendor.wifi.fw_path_any_mode` the AIDL Wi-Fi HAL writes the firmware path for every chip mode, not only V1: the built-in qcacld driver unloads itself when Wi-Fi goes down and only a firmware path write loads it again |
 | hardware/qcom-caf/bt/0001 | libbt-vendor with `USE_OLD_WCNSS_FILTER` (the msm8994 `wcnss_filter` blob uses unprefixed `wc_transport.*`) and without BT NV address support, as on Android 13 |
 | packages/modules/Bluetooth/0001 | `bluetooth.hfp.wbs.supported` (default true) lets a device turn off wideband speech; cityman sets it to false because mSBC over the PCM path gave no call audio |
 | frameworks/base/0001 | app compaction off by default: the 3.10 kernel has no `process_madvise` |

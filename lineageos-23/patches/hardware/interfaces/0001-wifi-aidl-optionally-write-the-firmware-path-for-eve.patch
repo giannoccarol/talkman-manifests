@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 19:54:19 +0100
+Subject: [PATCH] wifi: aidl: optionally write the firmware path for every chip
+ mode
+
+The firmware path is written only for the V1 STA and AP modes. A
+built-in qcacld driver unloads itself when every interface goes down
+and loads again only on a firmware path write, so with a V3 or dynamic
+chip mode Wi-Fi stayed off after it had been turned off once. With
+ro.vendor.wifi.fw_path_any_mode set, write the STA firmware path for
+the other modes too; the write is a no-op when the driver is loaded.
+
+Change-Id: Ia5ba3dbd2daf7a91bb23ba81fc0301904329c22f
+---
+ wifi/aidl/default/wifi_chip.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/wifi/aidl/default/wifi_chip.cpp b/wifi/aidl/default/wifi_chip.cpp
+index 7df168e..bd299b8 100644
+--- a/wifi/aidl/default/wifi_chip.cpp
++++ b/wifi/aidl/default/wifi_chip.cpp
+@@ -1453,6 +1453,11 @@ ndk::ScopedAStatus WifiChip::handleChipConfiguration(
+         success = mode_controller_.lock()->changeFirmwareMode(IfaceType::STA);
+     } else if (mode_id == feature_flags::chip_mode_ids::kV1Ap) {
+         success = mode_controller_.lock()->changeFirmwareMode(IfaceType::AP);
++    } else if (property_get_bool("ro.vendor.wifi.fw_path_any_mode", false)) {
++        // Built-in drivers that unload themselves when every interface is
++        // down (qcacld "enter low power") are loaded again by a firmware path
++        // write; do it for the dynamic/V3 modes too, not only for V1.
++        success = mode_controller_.lock()->changeFirmwareMode(IfaceType::STA);
+     }
+     if (!success) {
+         return createWifiStatus(WifiStatusCode::ERROR_UNKNOWN);
+-- 
+2.56.0
+
