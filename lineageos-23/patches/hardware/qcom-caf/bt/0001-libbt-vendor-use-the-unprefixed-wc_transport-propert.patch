@@ -1,0 +1,32 @@
+From 01c85918eb6b84db54a1a59c57c114498497668a Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 11:33:06 +0100
+Subject: [PATCH] libbt-vendor: use the unprefixed wc_transport properties
+
+The msm8994 wcnss_filter blob reads and sets wc_transport.*; with the
+vendor. prefix the filter never starts and Bluetooth times out. Also
+drop BT_NV_SUPPORT so the address comes from /persist/bdaddr.txt as on
+Android 13.
+
+Change-Id: Id1b9b1253402881553266b7abee17364e5f56694
+---
+ libbt-vendor/Android.bp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/libbt-vendor/Android.bp b/libbt-vendor/Android.bp
+index 3ba0159..613daa0 100644
+--- a/libbt-vendor/Android.bp
++++ b/libbt-vendor/Android.bp
+@@ -12,8 +12,7 @@ cc_library_shared {
+     vendor: true,
+ 
+     cflags: [
+-        "-DBT_NV_SUPPORT",
+-        "-DBT_NV_SUPPORT_DL",
++        "-DUSE_OLD_WCNSS_FILTER",
+         "-Wno-enum-conversion",
+         "-Wno-incompatible-pointer-types-discards-qualifiers",
+         "-Wno-unused-function",
+-- 
+2.56.0
+

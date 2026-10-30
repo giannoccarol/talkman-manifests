@@ -43,6 +43,7 @@ LineageOS 23.2 plus:
 | build/soong/0001 | `SOONG_GOMEMLIMIT`/`SOONG_GOGC` reach `soong_build` (memory-bounded analysis) |
 | build/soong/0002 | `rustc_wrapper.sh` strips the build root only at the start of a path; with the tree at `/src` it also cut `/src/` inside paths and every build rebuilt aconfig and its outputs |
 | hardware/qcom-caf/msm8994/display/0001 | define `PAGE_SIZE` when bionic does not (`__BIONIC_NO_PAGE_SIZE_MACRO`) |
+| hardware/qcom-caf/bt/0001 | libbt-vendor with `USE_OLD_WCNSS_FILTER` (the msm8994 `wcnss_filter` blob uses unprefixed `wc_transport.*`) and without BT NV address support, as on Android 13 |
 | frameworks/base/0001 | app compaction off by default: the 3.10 kernel has no `process_madvise` |
 | frameworks/base/0002 | cached processes can be killed right after boot (3 GB device) |
 
