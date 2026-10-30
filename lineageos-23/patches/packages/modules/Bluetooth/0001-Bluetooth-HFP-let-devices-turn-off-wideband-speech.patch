@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 19:50:58 +0100
+Subject: [PATCH] Bluetooth: HFP: let devices turn off wideband speech
+
+get_wbs_supported() always returned true, so a headset that supports
+mSBC always got a wideband SCO link. Read bluetooth.hfp.wbs.supported
+(default true) so that devices whose controller cannot carry mSBC on
+the PCM path can stay on CVSD.
+
+Change-Id: I67ee071c065b190c7710872b3c00536f3f12c164
+---
+ system/stack/btm/btm_sco_hfp_hal.cc | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/system/stack/btm/btm_sco_hfp_hal.cc b/system/stack/btm/btm_sco_hfp_hal.cc
+index c2c7239..c8c625c 100644
+--- a/system/stack/btm/btm_sco_hfp_hal.cc
++++ b/system/stack/btm/btm_sco_hfp_hal.cc
+@@ -29,8 +29,9 @@ void init() {
+ // This is not used in Android.
+ bool is_coding_format_supported(esco_coding_format_t /* coding_format */) { return true; }
+ 
+-// Android statically compiles WBS support.
+-bool get_wbs_supported() { return true; }
++// Android statically compiles WBS support. Devices whose controller cannot
++// carry mSBC on the PCM path can turn it off and keep calls on CVSD.
++bool get_wbs_supported() { return osi_property_get_bool("bluetooth.hfp.wbs.supported", true); }
+ 
+ // Software path implies support of SWB.
+ bool get_swb_supported() {
+-- 
+2.56.0
+
