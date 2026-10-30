@@ -1,7 +1,7 @@
 # cityman — LineageOS 23.2 (Android 16) manifest
 
-Status (2026-10-29): work in progress. The tree syncs, `lunch` works and the
-build is being fixed module by module; **no Android 16 build has booted yet**.
+Status (2026-10-30): the full build completes (`m bacon` produces the flashable
+zip); **no Android 16 build has booted yet**.
 The kernel branch was boot-tested on Android 13 (eBPF: 24/24 programs load).
 Do not flash anything from these branches expecting a working phone.
 
