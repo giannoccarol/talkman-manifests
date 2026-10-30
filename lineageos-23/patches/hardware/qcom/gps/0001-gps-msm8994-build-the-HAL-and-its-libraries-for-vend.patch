@@ -1,0 +1,60 @@
+From 1b82796b82e02dce8d7b0a49b33df629601dc1ca Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 15:53:50 +0100
+Subject: [PATCH] gps: msm8994: build the HAL and its libraries for vendor
+
+The GNSS HIDL service runs on vendor and can no longer load
+gps.<platform> and its dependencies from /system on Android 16.
+---
+ msm8994/core/Android.mk                     | 1 +
+ msm8994/loc_api/libloc_api_50001/Android.mk | 2 ++
+ msm8994/utils/Android.mk                    | 1 +
+ 3 files changed, 4 insertions(+)
+
+diff --git a/msm8994/core/Android.mk b/msm8994/core/Android.mk
+index 11b8388..9cdda61 100644
+--- a/msm8994/core/Android.mk
++++ b/msm8994/core/Android.mk
+@@ -6,6 +6,7 @@ LOCAL_PATH := $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+ LOCAL_MODULE := libloc_core
++LOCAL_VENDOR_MODULE := true
+ LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
+ LOCAL_LICENSE_CONDITIONS := notice
+ LOCAL_MODULE_OWNER := qcom
+diff --git a/msm8994/loc_api/libloc_api_50001/Android.mk b/msm8994/loc_api/libloc_api_50001/Android.mk
+index 2a715e0..e435c5e 100644
+--- a/msm8994/loc_api/libloc_api_50001/Android.mk
++++ b/msm8994/loc_api/libloc_api_50001/Android.mk
+@@ -6,6 +6,7 @@ LOCAL_PATH := $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+ LOCAL_MODULE := libloc_eng
++LOCAL_VENDOR_MODULE := true
+ LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
+ LOCAL_LICENSE_CONDITIONS := notice
+ LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../NOTICE
+@@ -54,6 +55,7 @@ include $(BUILD_SHARED_LIBRARY)
+ include $(CLEAR_VARS)
+ 
+ LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
++LOCAL_VENDOR_MODULE := true
+ LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
+ LOCAL_LICENSE_CONDITIONS := notice
+ LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../NOTICE
+diff --git a/msm8994/utils/Android.mk b/msm8994/utils/Android.mk
+index 3e14b9c..a274e30 100644
+--- a/msm8994/utils/Android.mk
++++ b/msm8994/utils/Android.mk
+@@ -38,6 +38,7 @@ LOCAL_C_INCLUDES:= \
+     $(LOCAL_PATH)/../platform_lib_abstractions
+ 
+ LOCAL_MODULE := libgps.utils
++LOCAL_VENDOR_MODULE := true
+ LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
+ LOCAL_LICENSE_CONDITIONS := notice
+ 
+-- 
+2.56.0
+
