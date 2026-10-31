@@ -1,0 +1,88 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 12:43:09 +0100
+Subject: [PATCH] libsensorndkbridge: give each thread its own looper
+
+ALooper_prepare() and ALooper_forThread() returned one process-wide
+looper, so threads polling at the same time shared one wake flag and
+ALooper_wake() could wake the wrong thread. In mm-qcamera-daemon the
+sensor thread of a closing camera session then never left pollOnce(),
+the session stop blocked in pthread_join() and no camera could be opened
+again. Use a looper per thread, as the NDK does, and broadcast wakeups.
+
+Change-Id: Iaa24ad38c631e991fa02a904c16f0c0622cf3fee
+---
+ sensorservice/libsensorndkbridge/ALooper.cpp  |  2 +-
+ .../libsensorndkbridge/ASensorManager.cpp     | 29 ++++++++++++-------
+ 2 files changed, 19 insertions(+), 12 deletions(-)
+
+diff --git a/sensorservice/libsensorndkbridge/ALooper.cpp b/sensorservice/libsensorndkbridge/ALooper.cpp
+index a4cb8cf..cae06db 100644
+--- a/sensorservice/libsensorndkbridge/ALooper.cpp
++++ b/sensorservice/libsensorndkbridge/ALooper.cpp
+@@ -37,7 +37,7 @@ void ALooper::signalSensorEvents(const std::shared_ptr<ASensorEventQueue>& queue
+ void ALooper::wake() {
+     Mutex::Autolock autoLock(mLock);
+     mAwoken = true;
+-    mCondition.signal();
++    mCondition.broadcast();
+ }
+ 
+ int ALooper::pollOnce(
+diff --git a/sensorservice/libsensorndkbridge/ASensorManager.cpp b/sensorservice/libsensorndkbridge/ASensorManager.cpp
+index 2438700..6a67818 100644
+--- a/sensorservice/libsensorndkbridge/ASensorManager.cpp
++++ b/sensorservice/libsensorndkbridge/ASensorManager.cpp
+@@ -456,31 +456,38 @@ int ASensor_getHighestDirectReportRateLevel(ASensor const* sensor) {
+     }
+ }
+ 
+-static ALooper *getTheLooper() {
+-    static ALooper *sLooper = NULL;
+ 
+-    Mutex::Autolock autoLock(gLock);
+-    if (sLooper == NULL) {
+-        sLooper = new ALooper;
+-    }
++/*
++ * One looper per thread, as in the NDK. With a single process-wide looper,
++ * two threads polling at once (for example the sensor threads of two camera
++ * sessions in mm-qcamera-daemon) shared one wake flag: ALooper_wake() for one
++ * of them could wake the other, and the thread being stopped then waited
++ * forever, so pthread_join() in its owner never returned. The looper is not
++ * freed when its thread exits, because event queues created on it may still
++ * hold the pointer.
++ */
++static thread_local ALooper *tLooper = NULL;
+ 
+-    return sLooper;
++static ALooper *threadLooper() {
++    if (tLooper == NULL) {
++        tLooper = new ALooper;
++    }
++    return tLooper;
+ }
+ 
+-
+ ALooper *ALooper_forThread() {
+     LOG(VERBOSE) << "ALooper_forThread";
+-    return getTheLooper();
++    return threadLooper();
+ }
+ 
+ ALooper *ALooper_prepare(int /* opts */) {
+     LOG(VERBOSE) << "ALooper_prepare";
+-    return getTheLooper();
++    return threadLooper();
+ }
+ 
+ int ALooper_pollOnce(
+         int timeoutMillis, int* outFd, int* outEvents, void** outData) {
+-    int res = getTheLooper()->pollOnce(timeoutMillis, outFd, outEvents, outData);
++    int res = threadLooper()->pollOnce(timeoutMillis, outFd, outEvents, outData);
+     LOG(VERBOSE) << "ALooper_pollOnce => " << res;
+     return res;
+ }
+-- 
+2.56.0
+
