@@ -1,0 +1,55 @@
+From bd272ec971c33ba4d104a6a504e5727c9b166e66 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 13:44:49 +0100
+Subject: [PATCH] camera: api1: fall back to slow preview sizes
+
+Parameters::getFilteredSizes drops every size whose minimum frame
+duration is below 29.97 fps. A sensor with a single slow mode (the
+Lumia 950 XL rear camera runs at 20 fps) is left with no preview size,
+so every API1 client fails to connect with 'unable to build defaults'.
+
+When no size reaches the threshold, use the slower sizes instead of
+failing. Devices with a fast mode are unchanged.
+
+Change-Id: Idb9d33c307d6a13a10bffdab30e091922c8aa78e
+---
+ .../libcameraservice/api1/client2/Parameters.cpp       | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/services/camera/libcameraservice/api1/client2/Parameters.cpp b/services/camera/libcameraservice/api1/client2/Parameters.cpp
+index ad0382a..2164096 100644
+--- a/services/camera/libcameraservice/api1/client2/Parameters.cpp
++++ b/services/camera/libcameraservice/api1/client2/Parameters.cpp
+@@ -3059,6 +3059,9 @@ status_t Parameters::getFilteredSizes(const Size &lower, const Size &upper,
+     }
+     sizes->clear();
+ 
++    // Sizes below MIN_PREVIEW_RECORD_FPS, used only when no size reaches it:
++    // a sensor with a single slow mode would otherwise have no API1 preview.
++    Vector<Size> slowSizes;
+     Vector<StreamConfiguration> scs = getStreamConfigurations();
+     for (size_t i=0; i < scs.size(); i++) {
+         const StreamConfiguration &sc = scs[i];
+@@ -3070,12 +3073,19 @@ status_t Parameters::getFilteredSizes(const Size &lower, const Size &upper,
+                     {sc.width, sc.height}, HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED);
+             if (minFrameDuration > MAX_PREVIEW_RECORD_DURATION_NS) {
+                 // Filter slow sizes from preview/record
++                slowSizes.push({sc.width, sc.height});
+                 continue;
+             }
+             sizes->push({sc.width, sc.height});
+         }
+     }
+ 
++    if (sizes->isEmpty() && !slowSizes.isEmpty()) {
++        ALOGW("%s: no size reaches %.2f fps, using %zu slower sizes", __FUNCTION__,
++                MIN_PREVIEW_RECORD_FPS, slowSizes.size());
++        *sizes = slowSizes;
++    }
++
+     if (sizes->isEmpty()) {
+         ALOGE("generated preview size list is empty!!");
+         return BAD_VALUE;
+-- 
+2.56.0
+
