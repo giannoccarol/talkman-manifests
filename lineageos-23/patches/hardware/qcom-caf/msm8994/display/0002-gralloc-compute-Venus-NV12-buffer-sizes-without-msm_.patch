@@ -1,0 +1,70 @@
+From 1374871823fd8a861a5d6179acd0e1666efde7e0 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 18:44:54 +0100
+Subject: [PATCH] gralloc: compute Venus NV12 buffer sizes without
+ msm_media_info.h
+
+The Android.bp build has no msm_media_info.h, so VENUS_COLOR_FORMAT is
+undefined and the Venus size macros fell back to 0. Every
+HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS allocation then failed with -EINVAL:
+the hardware video decoder could not get output buffers and video played
+as a green screen.
+
+Implement the NV12 layout the MSM8994 video firmware expects (stride
+aligned to 128, luma scanlines to 32, chroma scanlines to 16, 4 KiB
+chroma alignment, 8 KiB extradata). UBWC stays unsupported.
+---
+ libgralloc/alloc_controller.cpp | 37 ++++++++++++++++++++++++++++++---
+ 1 file changed, 34 insertions(+), 3 deletions(-)
+
+diff --git a/libgralloc/alloc_controller.cpp b/libgralloc/alloc_controller.cpp
+index a1093f7..57c6ee8 100755
+--- a/libgralloc/alloc_controller.cpp
++++ b/libgralloc/alloc_controller.cpp
+@@ -42,9 +42,40 @@
+ #ifdef VENUS_COLOR_FORMAT
+ #include <media/msm_media_info.h>
+ #else
+-#define VENUS_Y_STRIDE(args...) 0
+-#define VENUS_Y_SCANLINES(args...) 0
+-#define VENUS_BUFFER_SIZE(args...) 0
++/*
++ * msm_media_info.h is a kernel header the build does not export. Without it
++ * every Venus NV12 size used to be 0, so gralloc refused the hardware video
++ * decoder's output buffers (-EINVAL) and video showed green. This is the Venus
++ * NV12 layout the MSM8994 video firmware expects: luma and chroma stride
++ * aligned to 128, luma scanlines to 32, chroma scanlines to 16, a 4 KiB chroma
++ * alignment and 8 KiB of extradata. UBWC is not used on this target.
++ */
++enum { COLOR_FMT_NV12 = 0, COLOR_FMT_NV12_UBWC = 1 };
++
++static inline unsigned int venus_align(unsigned int v, unsigned int a)
++{
++    return (v + a - 1) & ~(a - 1);
++}
++
++static inline unsigned int VENUS_Y_STRIDE(int fmt, int width)
++{
++    return fmt == COLOR_FMT_NV12 ? venus_align(width, 128) : 0;
++}
++
++static inline unsigned int VENUS_Y_SCANLINES(int fmt, int height)
++{
++    return fmt == COLOR_FMT_NV12 ? venus_align(height, 32) : 0;
++}
++
++static inline unsigned int VENUS_BUFFER_SIZE(int fmt, int width, int height)
++{
++    if (fmt != COLOR_FMT_NV12 || width <= 0 || height <= 0)
++        return 0;
++    unsigned int stride = venus_align(width, 128);
++    unsigned int y_plane = stride * venus_align(height, 32);
++    unsigned int uv_plane = stride * venus_align((height + 1) >> 1, 16) + 4096;
++    return venus_align(y_plane + uv_plane + 8 * 1024, 4096);
++}
+ #endif
+ 
+ #define ASTC_BLOCK_SIZE 16
+-- 
+2.56.0
+
