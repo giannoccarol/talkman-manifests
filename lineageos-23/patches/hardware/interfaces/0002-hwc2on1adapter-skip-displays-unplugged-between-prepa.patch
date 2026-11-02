@@ -1,0 +1,119 @@
+From a971b911cde318f8f23090f971a4ff565582171a Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 11:51:43 +0100
+Subject: [PATCH] hwc2on1adapter: skip displays unplugged between prepare and
+ set
+
+On HWC1 hotplug disconnect the external display object is destroyed,
+but mHwc1Contents still points at the contents it owned until the next
+prepareAllDisplays(), and setAllDisplays() looked the display up with
+operator[], which inserts an empty entry: the composer then called
+set() on a null display and crashed (mutex at 0x10) every time an HDMI
+sink went away.
+
+Drop the external contents on disconnect and look displays up without
+inserting, skipping the ones that are gone.
+
+Change-Id: I3edca84a527761d1f1c5aec42fbe1f1e3d1653c8
+---
+ .../utils/hwc2on1adapter/HWC2On1Adapter.cpp   | 40 +++++++++++++++----
+ .../include/hwc2on1adapter/HWC2On1Adapter.h   |  2 +
+ 2 files changed, 35 insertions(+), 7 deletions(-)
+
+diff --git a/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp b/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
+index f14cbc7..412198a 100644
+--- a/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
++++ b/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
+@@ -2397,8 +2397,11 @@ bool HWC2On1Adapter::prepareAllDisplays() {
+             continue;
+         }
+ 
+-        auto displayId = mHwc1DisplayMap[hwc1Id];
+-        auto& display = mDisplays[displayId];
++        auto display = getHwc1Display(hwc1Id);
++        if (!display) {
++            mHwc1Contents[hwc1Id] = nullptr;
++            continue;
++        }
+         display->generateChanges();
+     }
+ 
+@@ -2482,6 +2485,19 @@ void dumpHWC1Message(hwc_composer_device_1* device, size_t numDisplays,
+     ALOGV("-----------------------------");
+ }
+ 
++std::shared_ptr<HWC2On1Adapter::Display> HWC2On1Adapter::getHwc1Display(
++        size_t hwc1Id) {
++    auto mapped = mHwc1DisplayMap.find(static_cast<int>(hwc1Id));
++    if (mapped == mHwc1DisplayMap.end()) {
++        return nullptr;
++    }
++    auto display = mDisplays.find(mapped->second);
++    if (display == mDisplays.end()) {
++        return nullptr;
++    }
++    return display->second;
++}
++
+ Error HWC2On1Adapter::setAllDisplays() {
+     ATRACE_CALL();
+ 
+@@ -2493,8 +2509,12 @@ Error HWC2On1Adapter::setAllDisplays() {
+             continue;
+         }
+ 
+-        auto displayId = mHwc1DisplayMap[hwc1Id];
+-        auto& display = mDisplays[displayId];
++        // The display may have been unplugged since prepareAllDisplays().
++        auto display = getHwc1Display(hwc1Id);
++        if (!display) {
++            mHwc1Contents[hwc1Id] = nullptr;
++            continue;
++        }
+         Error error = display->set(*mHwc1Contents[hwc1Id]);
+         if (error != Error::None) {
+             ALOGE("setAllDisplays: Failed to set display %zd: %s", hwc1Id,
+@@ -2517,8 +2537,10 @@ Error HWC2On1Adapter::setAllDisplays() {
+             continue;
+         }
+ 
+-        auto displayId = mHwc1DisplayMap[hwc1Id];
+-        auto& display = mDisplays[displayId];
++        auto display = getHwc1Display(hwc1Id);
++        if (!display) {
++            continue;
++        }
+         auto retireFenceFd = mHwc1Contents[hwc1Id]->retireFenceFd;
+         ALOGV("setAllDisplays: Adding retire fence %d to display %zd",
+                 retireFenceFd, hwc1Id);
+@@ -2615,9 +2637,13 @@ void HWC2On1Adapter::hwc1Hotplug(int hwc1DisplayId, int connected) {
+             return;
+         }
+ 
+-        // Disconnect an existing display
++        // Disconnect an existing display. mHwc1Contents may still point at
++        // the contents it owns until the next prepareAllDisplays().
+         displayId = mHwc1DisplayMap[hwc1DisplayId];
+         mHwc1DisplayMap.erase(HWC_DISPLAY_EXTERNAL);
++        if (mHwc1Contents.size() > HWC_DISPLAY_EXTERNAL) {
++            mHwc1Contents[HWC_DISPLAY_EXTERNAL] = nullptr;
++        }
+         mDisplays.erase(displayId);
+     }
+ 
+diff --git a/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h b/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
+index 6f1fb70..bd4a717 100644
+--- a/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
++++ b/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
+@@ -681,6 +681,8 @@ private:
+ 
+     bool prepareAllDisplays();
+     std::vector<struct hwc_display_contents_1*> mHwc1Contents;
++    // The adapter display mapped to an HWC1 display id, or null once unplugged.
++    std::shared_ptr<Display> getHwc1Display(size_t hwc1Id);
+     HWC2::Error setAllDisplays();
+ 
+     // Callbacks
+-- 
+2.56.0
+
