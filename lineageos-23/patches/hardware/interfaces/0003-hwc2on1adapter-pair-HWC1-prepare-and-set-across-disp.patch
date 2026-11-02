@@ -1,0 +1,286 @@
+From 9195ec86d5066cdc61be586e0292c4c0009ac47d Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 12:27:40 +0100
+Subject: [PATCH] hwc2on1adapter: pair HWC1 prepare and set across displays
+
+HWC2 clients validate and present one display at a time, while HWC1
+prepares and sets all displays together, and the msm8994 HWC1 takes a
+lock in prepare() that only set() releases. With an external display
+the present of the primary called set() for a display not validated
+yet: the whole set failed, the primary stopped updating and the next
+validate of the external display reused stale changes.
+
+Prepare every display at each validate and, at present, set only the
+display being presented, passing the others to HWC1 as null. The HWC1
+lock is then held only between the validate and the present of one
+display: deferring the set until all displays were presented left it
+taken across client calls and setPowerMode() deadlocked. Layers of the
+external display are composed on the GPU, so only its client target
+goes to HWC1; the msm8994 overlay refused them.
+
+The round state is kept in the source file, not in the class: the
+composer service allocates the adapter with the class size it was built
+with, so new members would be written past the object.
+
+Change-Id: I592207662361481fc4358a507bc9c5d22de14a66
+---
+ .../utils/hwc2on1adapter/HWC2On1Adapter.cpp   | 104 ++++++++++++++----
+ .../include/hwc2on1adapter/HWC2On1Adapter.h   |  16 ++-
+ 2 files changed, 98 insertions(+), 22 deletions(-)
+
+diff --git a/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp b/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
+index 412198a..6dee647 100644
+--- a/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
++++ b/graphics/composer/2.1/utils/hwc2on1adapter/HWC2On1Adapter.cpp
+@@ -24,6 +24,7 @@
+ 
+ 
+ #include <inttypes.h>
++#include <set>
+ 
+ #include <algorithm>
+ #include <chrono>
+@@ -53,6 +54,13 @@ static hwc2_function_pointer_t asFP(T function)
+ 
+ using namespace HWC2;
+ 
++// Prepare/set round across displays (see HWC2On1Adapter.h). Kept here and
++// not as members so that the size of HWC2On1Adapter does not change: the
++// composer service allocates it. One adapter per process; always accessed
++// with the adapter state lock held.
++static bool sRoundOpen = false;
++static std::set<hwc2_display_t> sRoundPending;
++
+ static constexpr Attribute ColorMode = static_cast<Attribute>(6);
+ 
+ namespace android {
+@@ -791,7 +799,7 @@ Error HWC2On1Adapter::Display::present(int32_t* outRetireFence) {
+     std::unique_lock<std::recursive_mutex> lock(mStateMutex);
+ 
+     if (mChanges) {
+-        Error error = mDevice.setAllDisplays();
++        Error error = mDevice.presentInRound(mId);
+         if (error != Error::None) {
+             ALOGE("[%" PRIu64 "] present: setAllDisplaysFailed (%s)", mId,
+                     to_string(error).c_str());
+@@ -975,12 +983,13 @@ Error HWC2On1Adapter::Display::validate(uint32_t* outNumTypes,
+         uint32_t* outNumRequests) {
+     std::unique_lock<std::recursive_mutex> lock(mStateMutex);
+ 
+-    if (!mChanges) {
++    if (mDevice.needsPrepare(mId)) {
+         if (!mDevice.prepareAllDisplays()) {
+             return Error::BadDisplay;
+         }
+-    } else {
+-        ALOGE("Validate was called more than once!");
++    }
++    if (!mChanges) {
++        return Error::BadDisplay;
+     }
+ 
+     *outNumTypes = mChanges->getNumTypes();
+@@ -1236,6 +1245,13 @@ bool HWC2On1Adapter::Display::prepare() {
+         hwc1Layer.acquireFenceFd = -1;
+         ALOGV("Applying states for layer %" PRIu64 " ", layer->getId());
+         layer->applyState(hwc1Layer);
++        // External display: only the client target goes to HWC1. Its layers
++        // (a mirror of the primary) are composed on the GPU; the msm8994
++        // overlay refused them (empty source rectangles).
++        if (mHwc1Id == HWC_DISPLAY_EXTERNAL) {
++            hwc1Layer.compositionType = HWC_FRAMEBUFFER;
++            hwc1Layer.flags |= HWC_SKIP_LAYER;
++        }
+     }
+ 
+     prepareFramebufferTarget();
+@@ -1272,6 +1288,11 @@ bool HWC2On1Adapter::Display::hasChanges() const {
+     return mChanges != nullptr;
+ }
+ 
++bool HWC2On1Adapter::Display::readyForSet() const {
++    std::unique_lock<std::recursive_mutex> lock(mStateMutex);
++    return mChanges != nullptr && mChanges->getNumTypes() == 0;
++}
++
+ Error HWC2On1Adapter::Display::set(hwc_display_contents_1& hwcContents) {
+     std::unique_lock<std::recursive_mutex> lock(mStateMutex);
+ 
+@@ -2392,6 +2413,8 @@ bool HWC2On1Adapter::prepareAllDisplays() {
+     }
+ 
+     // Return the received contents to their respective displays
++    sRoundOpen = true;
++    sRoundPending.clear();
+     for (size_t hwc1Id = 0; hwc1Id < mHwc1Contents.size(); ++hwc1Id) {
+         if (mHwc1Contents[hwc1Id] == nullptr) {
+             continue;
+@@ -2403,6 +2426,7 @@ bool HWC2On1Adapter::prepareAllDisplays() {
+             continue;
+         }
+         display->generateChanges();
++        sRoundPending.insert(display->getId());
+     }
+ 
+     return true;
+@@ -2498,42 +2522,44 @@ std::shared_ptr<HWC2On1Adapter::Display> HWC2On1Adapter::getHwc1Display(
+     return display->second;
+ }
+ 
+-Error HWC2On1Adapter::setAllDisplays() {
++Error HWC2On1Adapter::setAllDisplays(hwc2_display_t onlyDisplay) {
+     ATRACE_CALL();
+ 
+     std::unique_lock<std::recursive_timed_mutex> lock(mStateMutex);
+ 
+-    // Make sure we're ready to validate
+-    for (size_t hwc1Id = 0; hwc1Id < mHwc1Contents.size(); ++hwc1Id) {
+-        if (mHwc1Contents[hwc1Id] == nullptr) {
++    // Only displays validated and accepted in this round go to HWC1: the
++    // others (not presented by the client this round, or unplugged) are
++    // passed as null, which HWC1 skips.
++    std::vector<struct hwc_display_contents_1*> contents(mHwc1Contents);
++    for (size_t hwc1Id = 0; hwc1Id < contents.size(); ++hwc1Id) {
++        if (contents[hwc1Id] == nullptr) {
+             continue;
+         }
+ 
+-        // The display may have been unplugged since prepareAllDisplays().
+         auto display = getHwc1Display(hwc1Id);
+-        if (!display) {
+-            mHwc1Contents[hwc1Id] = nullptr;
++        if (!display || !display->readyForSet() ||
++                (onlyDisplay != UINT64_MAX && display->getId() != onlyDisplay)) {
++            contents[hwc1Id] = nullptr;
+             continue;
+         }
+-        Error error = display->set(*mHwc1Contents[hwc1Id]);
++        Error error = display->set(*contents[hwc1Id]);
+         if (error != Error::None) {
+             ALOGE("setAllDisplays: Failed to set display %zd: %s", hwc1Id,
+                     to_string(error).c_str());
+-            return error;
++            contents[hwc1Id] = nullptr;
+         }
+     }
+ 
+     ALOGV("Calling HWC1 set");
+     {
+         ATRACE_NAME("HWC1 set");
+-        //dumpHWC1Message(mHwc1Device, mHwc1Contents.size(), mHwc1Contents.data());
+-        mHwc1Device->set(mHwc1Device, mHwc1Contents.size(),
+-                mHwc1Contents.data());
++        //dumpHWC1Message(mHwc1Device, contents.size(), contents.data());
++        mHwc1Device->set(mHwc1Device, contents.size(), contents.data());
+     }
+ 
+     // Add retire and release fences
+-    for (size_t hwc1Id = 0; hwc1Id < mHwc1Contents.size(); ++hwc1Id) {
+-        if (mHwc1Contents[hwc1Id] == nullptr) {
++    for (size_t hwc1Id = 0; hwc1Id < contents.size(); ++hwc1Id) {
++        if (contents[hwc1Id] == nullptr) {
+             continue;
+         }
+ 
+@@ -2541,16 +2567,51 @@ Error HWC2On1Adapter::setAllDisplays() {
+         if (!display) {
+             continue;
+         }
+-        auto retireFenceFd = mHwc1Contents[hwc1Id]->retireFenceFd;
++        auto retireFenceFd = contents[hwc1Id]->retireFenceFd;
+         ALOGV("setAllDisplays: Adding retire fence %d to display %zd",
+                 retireFenceFd, hwc1Id);
+-        display->addRetireFence(mHwc1Contents[hwc1Id]->retireFenceFd);
+-        display->addReleaseFences(*mHwc1Contents[hwc1Id]);
++        display->addRetireFence(contents[hwc1Id]->retireFenceFd);
++        display->addReleaseFences(*contents[hwc1Id]);
+     }
+ 
+     return Error::None;
+ }
+ 
++bool HWC2On1Adapter::needsPrepare(hwc2_display_t displayId) {
++    std::unique_lock<std::recursive_timed_mutex> lock(mStateMutex);
++
++    // Presented already in the open round: another display was skipped,
++    // finish that round with its set() before preparing a new one.
++    if (sRoundOpen && sRoundPending.count(displayId) == 0) {
++        closeRound();
++    }
++    return !sRoundOpen;
++}
++
++Error HWC2On1Adapter::closeRound() {
++    std::unique_lock<std::recursive_timed_mutex> lock(mStateMutex);
++
++    if (!sRoundOpen) {
++        return Error::None;
++    }
++    sRoundOpen = false;
++    sRoundPending.clear();
++    return setAllDisplays();
++}
++
++Error HWC2On1Adapter::presentInRound(hwc2_display_t displayId) {
++    std::unique_lock<std::recursive_timed_mutex> lock(mStateMutex);
++
++    if (!sRoundOpen) {
++        return Error::None;
++    }
++    // Set now, and only this display: waiting for the others would keep the
++    // HWC1 lock taken in prepare() across client calls (setPowerMode, ...).
++    sRoundOpen = false;
++    sRoundPending.clear();
++    return setAllDisplays(displayId);
++}
++
+ void HWC2On1Adapter::hwc1Invalidate() {
+     ALOGV("Received hwc1Invalidate");
+ 
+@@ -2644,6 +2705,7 @@ void HWC2On1Adapter::hwc1Hotplug(int hwc1DisplayId, int connected) {
+         if (mHwc1Contents.size() > HWC_DISPLAY_EXTERNAL) {
+             mHwc1Contents[HWC_DISPLAY_EXTERNAL] = nullptr;
+         }
++        sRoundPending.erase(displayId);
+         mDisplays.erase(displayId);
+     }
+ 
+diff --git a/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h b/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
+index bd4a717..ac3cdf2 100644
+--- a/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
++++ b/graphics/composer/2.1/utils/hwc2on1adapter/include/hwc2on1adapter/HWC2On1Adapter.h
+@@ -267,6 +267,8 @@ private:
+             void generateChanges();
+ 
+             bool hasChanges() const;
++            // Validated and accepted: can go to the next HWC1 set().
++            bool readyForSet() const;
+             HWC2::Error set(hwc_display_contents_1& hwcContents);
+             void addRetireFence(int fenceFd);
+             void addReleaseFences(const hwc_display_contents_1& hwcContents);
+@@ -681,9 +683,21 @@ private:
+ 
+     bool prepareAllDisplays();
+     std::vector<struct hwc_display_contents_1*> mHwc1Contents;
++
++    // HWC1 prepare() takes a device lock that only set() releases, so each
++    // prepare must be followed by exactly one set, and no other HWC1 call may
++    // wait in between. HWC2 validates and presents one display at a time: a
++    // round is the prepare of all displays at a validate and the set of the
++    // display being presented; the next validate prepares again.
++    // The round state lives in HWC2On1Adapter.cpp, not in this class: the
++    // composer service allocates the adapter with the size it was built with.
++    bool needsPrepare(hwc2_display_t displayId);
++    HWC2::Error closeRound();
++    HWC2::Error presentInRound(hwc2_display_t displayId);
+     // The adapter display mapped to an HWC1 display id, or null once unplugged.
+     std::shared_ptr<Display> getHwc1Display(size_t hwc1Id);
+-    HWC2::Error setAllDisplays();
++    // onlyDisplay: set just that display (the others go to HWC1 as null).
++    HWC2::Error setAllDisplays(hwc2_display_t onlyDisplay = UINT64_MAX);
+ 
+     // Callbacks
+     void hwc1Invalidate();
+-- 
+2.56.0
+
