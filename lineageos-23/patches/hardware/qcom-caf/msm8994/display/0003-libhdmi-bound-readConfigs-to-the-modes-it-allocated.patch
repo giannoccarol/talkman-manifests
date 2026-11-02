@@ -1,0 +1,97 @@
+From 418c474779f91a267a2710ea4698e4f2a5328f84 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 11:24:45 +0100
+Subject: [PATCH] libhdmi: bound readConfigs to the modes it allocated
+
+readConfigs() copied every entry of res_info into mDisplayConfigs, which
+holds mModeCount entries, and kept requesting pages while the driver
+returned data. requestNewPage() wrote the whole 4 KiB buffer instead of
+the page number, so a driver that refuses it returns the same page
+forever: on hotplug the composer wrote thousands of entries past the
+array and crashed in a loop.
+
+Stop at mModeCount, when a page adds nothing or after 64 pages; write
+only the page number; treat read errors as an empty file.
+---
+ libhdmi/hdmi.cpp | 27 ++++++++++++++++++++-------
+ 1 file changed, 20 insertions(+), 7 deletions(-)
+
+diff --git a/libhdmi/hdmi.cpp b/libhdmi/hdmi.cpp
+index a206207..9881a9b 100644
+--- a/libhdmi/hdmi.cpp
++++ b/libhdmi/hdmi.cpp
+@@ -551,7 +551,9 @@ void HDMIDisplay::requestNewPage(int pageNumber) {
+     if (fd >= 0) {
+         snprintf(pageString, sizeof(pageString), "%d", pageNumber);
+         ALOGD_IF(DEBUG, "%s: page=%s", __FUNCTION__, pageString);
+-        ssize_t err = write(fd, pageString, sizeof(pageString));
++        // Write only the page number: the whole buffer may be refused by
++        // the driver, which then keeps returning the same page.
++        ssize_t err = write(fd, pageString, strlen(pageString));
+         if (err <= 0) {
+             ALOGE("%s: Write to res_info failed (%d)", __FUNCTION__, errno);
+         }
+@@ -562,13 +564,14 @@ void HDMIDisplay::requestNewPage(int pageNumber) {
+ // Reads the contents of res_info node into a buffer if the file is not empty
+ bool HDMIDisplay::readResFile(char * configBuffer) {
+     bool fileRead = false;
+-    size_t bytesRead = 0;
++    ssize_t bytesRead = 0;
+     int fd = openDeviceNode("res_info", O_RDONLY);
+-    if (fd >= 0 && (bytesRead = read(fd, configBuffer, PAGE_SIZE)) != 0) {
++    if (fd >= 0 && (bytesRead = read(fd, configBuffer, PAGE_SIZE)) > 0) {
+         fileRead = true;
+     }
+-    close(fd);
+-    ALOGD_IF(DEBUG, "%s: bytesRead=%zu fileRead=%d",
++    if (fd >= 0)
++        close(fd);
++    ALOGD_IF(DEBUG, "%s: bytesRead=%zd fileRead=%d",
+             __FUNCTION__, bytesRead, fileRead);
+     return fileRead;
+ }
+@@ -579,8 +582,13 @@ void HDMIDisplay::readConfigs() {
+     int configIndex = 0;
+     int pageNumber = MSM_HDMI_INIT_RES_PAGE;
+     long unsigned int size = sizeof(msm_hdmi_mode_timing_info);
++    // mDisplayConfigs holds mModeCount entries. Stop there, and stop when a
++    // page adds nothing or after a bounded number of pages: a driver that
++    // ignores the page request returns the same page forever.
++    const int maxPages = 64;
+ 
+-    while (true) {
++    while (configIndex < mModeCount && pageNumber - MSM_HDMI_INIT_RES_PAGE < maxPages) {
++        int pageStart = configIndex;
+         char configBuffer[PAGE_SIZE] = {0};
+         msm_hdmi_mode_timing_info *info =
+                 (msm_hdmi_mode_timing_info*) configBuffer;
+@@ -588,7 +596,7 @@ void HDMIDisplay::readConfigs() {
+         if (!readResFile(configBuffer))
+             break;
+ 
+-        while (info->video_format && size < PAGE_SIZE) {
++        while (info->video_format && size < PAGE_SIZE && configIndex < mModeCount) {
+             mDisplayConfigs[configIndex] = *info;
+             size += sizeof(msm_hdmi_mode_timing_info);
+             info++;
+@@ -600,12 +608,17 @@ void HDMIDisplay::readConfigs() {
+                     mDisplayConfigs[configIndex].refresh_rate);
+             configIndex++;
+         }
++        if (configIndex == pageStart)
++            break;
+         size = sizeof(msm_hdmi_mode_timing_info);
+         // Request HDMI driver to populate res_info with more
+         // timing information
+         pageNumber++;
+         requestNewPage(pageNumber);
+     }
++    if (configIndex < mModeCount)
++        ALOGE("%s: read %d of %d modes from res_info", __FUNCTION__,
++              configIndex, mModeCount);
+ }
+ 
+ inline bool HDMIDisplay::isValidMode(int ID)
+-- 
+2.56.0
+

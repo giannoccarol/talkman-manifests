@@ -43,6 +43,7 @@ LineageOS 23.2 plus:
 | build/soong/0001 | `SOONG_GOMEMLIMIT`/`SOONG_GOGC` reach `soong_build` (memory-bounded analysis) |
 | build/soong/0002 | `rustc_wrapper.sh` strips the build root only at the start of a path; with the tree at `/src` it also cut `/src/` inside paths and every build rebuilt aconfig and its outputs |
 | hardware/qcom-caf/msm8994/display/0001 | define `PAGE_SIZE` when bionic does not (`__BIONIC_NO_PAGE_SIZE_MACRO`) |
+| hardware/qcom-caf/msm8994/display/0003 | libhdmi: `readConfigs()` stops at the modes it allocated, after a page that adds nothing or after 64 pages, and `requestNewPage()` writes only the page number; on HDMI hotplug the composer wrote thousands of entries past `mDisplayConfigs` and crashed in a loop |
 | hardware/qcom/gps/0001 | the msm8994 GPS HAL (`gps.<platform>`, `libloc_eng`, `libloc_core`, `libgps.utils`) is built for vendor: the GNSS service runs on vendor and cannot load them from /system on Android 16 |
 | hardware/interfaces/0001 | with `ro.vendor.wifi.fw_path_any_mode` the AIDL Wi-Fi HAL writes the firmware path for every chip mode, not only V1: the built-in qcacld driver unloads itself when Wi-Fi goes down and only a firmware path write loads it again |
 | frameworks/hardware/interfaces/0001 | libsensorndkbridge: one ALooper per thread and broadcast wakeups; with a single shared looper the camera daemon hung when a session closed (sensor thread never woke, `pthread_join` blocked) and the camera could not be reopened |
