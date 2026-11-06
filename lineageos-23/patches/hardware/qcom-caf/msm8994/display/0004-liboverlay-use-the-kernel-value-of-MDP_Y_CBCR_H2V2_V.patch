@@ -1,0 +1,36 @@
+From ee585d75ff46471b128fc4e129df05c98e0b61e0 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 6 Nov 2026 17:33:17 +0100
+Subject: [PATCH] liboverlay: use the kernel value of MDP_Y_CBCR_H2V2_VENUS
+
+The fallback that defined MDP_Y_CBCR_H2V2_VENUS as MDP_IMGTYPE_LIMIT when
+VENUS_COLOR_FORMAT is missing shadowed the enum of the kernel msm_mdp.h.
+The MDP rejected every Venus NV12 buffer with 'invalid pipe format 47' and
+'invalid rot format 47', so hardware video and the camera preview fell back
+to GPU composition.
+---
+ liboverlay/overlayUtils.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/liboverlay/overlayUtils.h b/liboverlay/overlayUtils.h
+index 5e3bd1f..8b7aa2f 100644
+--- a/liboverlay/overlayUtils.h
++++ b/liboverlay/overlayUtils.h
+@@ -45,10 +45,10 @@
+ #include <utils/Log.h>
+ #include "gralloc_priv.h" //for interlace
+ 
+-// Older platforms do not support Venus
+-#ifndef VENUS_COLOR_FORMAT
+-#define MDP_Y_CBCR_H2V2_VENUS MDP_IMGTYPE_LIMIT
+-#endif
++// MDP_Y_CBCR_H2V2_VENUS comes from the kernel's msm_mdp.h (27 on msm8994).
++// The old fallback to MDP_IMGTYPE_LIMIT, taken whenever msm_media_info.h is
++// missing, shadowed it: the MDP rejected every Venus NV12 buffer ("invalid
++// pipe/rot format 47") and video was composed by the GPU.
+ 
+ /*
+ *
+-- 
+2.56.0
+
