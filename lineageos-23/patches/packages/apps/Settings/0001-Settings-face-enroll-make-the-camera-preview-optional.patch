@@ -1,0 +1,49 @@
+From bcca3061dc35e0666b7913e220076a22aaf1295a Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 6 Nov 2026 22:40:46 +0100
+Subject: [PATCH] Settings: face enroll: make the camera preview optional
+
+Add config_face_enroll_use_camera_preview (default true). Devices whose
+face sensor uses a camera that cannot stream next to the front camera
+turn it off, so the enrollment does not take the camera away from the
+face HAL.
+
+Change-Id: I980be659acaa43996c3096608a81445dd6af016b
+---
+ res/values/config.xml                                         | 4 ++++
+ .../settings/biometrics/face/FaceEnrollPreviewFragment.java   | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/res/values/config.xml b/res/values/config.xml
+index 3a8f8ab..932f2b8 100644
+--- a/res/values/config.xml
++++ b/res/values/config.xml
+@@ -338,6 +338,10 @@
+     <!-- Whether to show the "less secure" info section on the face enroll intro screen -->
+     <bool name="config_face_intro_show_less_secure">false</bool>
+ 
++    <!-- Whether face enrollment shows the front camera preview. Turn it off when the face
++         sensor uses a camera that cannot stream at the same time as the front camera. -->
++    <bool name="config_face_enroll_use_camera_preview">true</bool>
++
+     <!-- Whether to show the "require eyes" info section on the face enroll intro screen -->
+     <bool name="config_face_intro_show_require_eyes">true</bool>
+ 
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+index 853ca7c..338fae7 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+@@ -272,6 +272,10 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+      * @param height The height of the texture view
+      */
+     private void openCamera(int width, int height) {
++        if (!getResources().getBoolean(R.bool.config_face_enroll_use_camera_preview)) {
++            // The face sensor needs a camera that cannot stream next to the front camera.
++            return;
++        }
+         try {
+             setUpCameraOutputs();
+             mCameraManager.openCamera(mCameraId, mCameraStateCallback, mHandler);
+-- 
+2.56.0
+
