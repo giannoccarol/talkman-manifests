@@ -16,6 +16,10 @@
   <project name="giannoccarol/cityman-iris" path="vendor/cityman-iris" remote="github" revision="main" />
   <!-- Performance profiles: Settings > Battery page and Quick Settings tile -->
   <project name="giannoccarol/android_packages_apps_CitymanParts" path="packages/apps/CitymanParts" remote="github" revision="lineage-23-cityman" />
+  <!-- VoLTE: phh's userspace IMS stack, krazey fork for LineageOS 23.x (built by
+       device.mk when present). Needs its git submodules (rnnoise, webrtc-aec3):
+       apply-patches.sh initialises them. -->
+  <project name="krazey/ims" path="packages/apps/PhhIms" remote="github" revision="a3fec01ebc4f51c39026565c4a451fef454637fa" />
 
   <project name="davigamer987/hardware_qcom_display" path="hardware/qcom-caf/msm8994/display" remote="github" revision="lineage-23.0-caf-msm8994" />
   <project name="davigamer987/hardware_qcom_audio" path="hardware/qcom-caf/msm8994/audio" remote="github" revision="lineage-23.0-caf-msm8994" />

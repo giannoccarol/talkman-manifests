@@ -24,3 +24,7 @@ apply_dir() { # <patch root> <project dir> <skip list>
 }
 for d in $(cd legacy_support_patches && find . -name '*.patch' -printf '%h\n' | sed 's|^\./||' | sort -u); do apply_dir "$PWD/legacy_support_patches" "$d" "$skip"; done
 for d in $(cd "$here/patches" && find . -name '*.patch' -printf '%h\n' | sed 's|^\./||' | sort -u); do apply_dir "$here/patches" "$d" " "; done
+# phh IMS (packages/apps/PhhIms): repo sync does not fetch git submodules.
+if [ -d packages/apps/PhhIms/.git ] || [ -f packages/apps/PhhIms/.git ]; then
+	(cd packages/apps/PhhIms && git submodule update --init --recursive -q) && echo "OK    packages/apps/PhhIms submodules" || echo "FAIL  packages/apps/PhhIms submodules"
+fi
