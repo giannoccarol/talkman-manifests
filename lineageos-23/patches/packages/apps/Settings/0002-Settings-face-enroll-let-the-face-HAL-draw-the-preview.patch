@@ -1,0 +1,245 @@
+From 3e93ac94814ee2ad60301938f4c800d35853474b Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Fri, 6 Nov 2026 23:49:05 +0100
+Subject: [PATCH] Settings: face enroll: let the face HAL draw the preview
+
+With config_face_enroll_hal_preview, the enrolling screen creates a
+square surface from its preview texture and passes it to
+FaceManager.enroll (FaceEnrollOptions.surfacePreview), waiting up to
+1.5 s for it, instead of opening the front camera. For face HALs that
+use a camera apps cannot open, such as an IR iris camera.
+
+Change-Id: I8a9b30f56cc9ea496b11b3fda584c99d58a7dd08
+---
+ res/values/config.xml                         |  5 ++
+ .../biometrics/face/FaceEnrollEnrolling.java  | 36 +++++++++++-
+ .../face/FaceEnrollPreviewFragment.java       | 55 ++++++++++++++++++-
+ .../biometrics/face/FaceEnrollSidecar.java    | 18 +++++-
+ 4 files changed, 109 insertions(+), 5 deletions(-)
+
+diff --git a/res/values/config.xml b/res/values/config.xml
+index 932f2b8..2ad08bf 100644
+--- a/res/values/config.xml
++++ b/res/values/config.xml
+@@ -342,6 +342,11 @@
+          sensor uses a camera that cannot stream at the same time as the front camera. -->
+     <bool name="config_face_enroll_use_camera_preview">true</bool>
+ 
++    <!-- Whether face enrollment passes the preview surface to the face HAL, which draws its own
++         preview (e.g. an IR camera the app cannot open). Use with
++         config_face_enroll_use_camera_preview off. -->
++    <bool name="config_face_enroll_hal_preview">false</bool>
++
+     <!-- Whether to show the "require eyes" info section on the face enroll intro screen -->
+     <bool name="config_face_intro_show_require_eyes">true</bool>
+ 
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java b/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
+index d520cd6..e7adcbb 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
+@@ -24,8 +24,11 @@ import static android.hardware.biometrics.BiometricFaceConstants.FEATURE_REQUIRE
+ import android.app.settings.SettingsEnums;
+ import android.content.Intent;
+ import android.os.Bundle;
++import android.os.Handler;
++import android.os.Looper;
+ import android.text.TextUtils;
+ import android.util.Log;
++import android.view.Surface;
+ import android.view.View;
+ import android.view.animation.AnimationUtils;
+ import android.view.animation.Interpolator;
+@@ -144,7 +147,10 @@ public class FaceEnrollEnrolling extends BiometricsEnrollEnrolling {
+ 
+     @Override
+     protected void startEnrollmentInternal() {
+-        super.startEnrollmentInternal();
++        final boolean halPreview = getResources().getBoolean(R.bool.config_face_enroll_hal_preview);
++        if (!halPreview) {
++            super.startEnrollmentInternal();
++        }
+         mPreviewFragment = (FaceEnrollPreviewFragment) getSupportFragmentManager()
+                 .findFragmentByTag(TAG_FACE_PREVIEW);
+         if (mPreviewFragment == null) {
+@@ -153,8 +159,32 @@ public class FaceEnrollEnrolling extends BiometricsEnrollEnrolling {
+                     .commitAllowingStateLoss();
+         }
+         mPreviewFragment.setListener(mListener);
++        if (halPreview) {
++            // Start enrolling once the preview surface exists, so the HAL gets it with the
++            // request; without a surface after a short wait, enroll without a preview.
++            mHalPreviewStarted = false;
++            mPreviewFragment.setHalPreviewListener(surface -> startWithHalPreview(surface));
++            mHalPreviewHandler.postDelayed(mHalPreviewTimeout, HAL_PREVIEW_WAIT_MS);
++        }
+     }
+ 
++    private static final long HAL_PREVIEW_WAIT_MS = 1500;
++    private final Handler mHalPreviewHandler = new Handler(Looper.getMainLooper());
++    private boolean mHalPreviewStarted;
++    private final Runnable mHalPreviewTimeout = () -> startWithHalPreview(null);
++
++    private void startWithHalPreview(Surface surface) {
++        if (mHalPreviewStarted || isFinishing() || isDestroyed()) {
++            return;
++        }
++        mHalPreviewStarted = true;
++        mHalPreviewHandler.removeCallbacks(mHalPreviewTimeout);
++        mHalPreviewSurface = surface;
++        super.startEnrollmentInternal();
++    }
++
++    private Surface mHalPreviewSurface;
++
+     @Override
+     protected Intent getFinishIntent() {
+         return new Intent(this, FaceEnrollFinish.class);
+@@ -167,7 +197,9 @@ public class FaceEnrollEnrolling extends BiometricsEnrollEnrolling {
+             disabledFeatures[i] = mDisabledFeatures.get(i);
+         }
+ 
+-        return new FaceEnrollSidecar(disabledFeatures, getIntent());
++        final FaceEnrollSidecar sidecar = new FaceEnrollSidecar(disabledFeatures, getIntent());
++        sidecar.setPreviewSurface(mHalPreviewSurface);
++        return sidecar;
+     }
+ 
+     @Override
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+index 338fae7..5ae2f4a 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+@@ -66,6 +66,16 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+     private Size mPreviewSize;
+     private ParticleCollection.Listener mListener;
+ 
++    /** Receives the surface the face HAL draws its own preview into. */
++    public interface HalPreviewListener {
++        void onHalPreviewSurface(Surface surface);
++    }
++
++    // Set when config_face_enroll_hal_preview is on: the face HAL draws into this surface
++    // (FaceEnrollOptions.surfacePreview) instead of Settings opening the front camera.
++    private HalPreviewListener mHalPreviewListener;
++    private Surface mHalPreviewSurface;
++
+     // View used to contain the circular cutout and enrollment animation drawable
+     private ImageView mCircleView;
+ 
+@@ -90,6 +100,10 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         @Override
+         public void onSurfaceTextureAvailable(
+                 SurfaceTexture surfaceTexture, int width, int height) {
++            if (isHalPreview()) {
++                createHalPreviewSurface(surfaceTexture, width, height);
++                return;
++            }
+             openCamera(width, height);
+         }
+ 
+@@ -208,7 +222,12 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         // a camera and start preview from here (otherwise, we wait until the surface is ready in
+         // the SurfaceTextureListener).
+         if (mTextureView.isAvailable()) {
+-            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
++            if (isHalPreview()) {
++                createHalPreviewSurface(mTextureView.getSurfaceTexture(),
++                        mTextureView.getWidth(), mTextureView.getHeight());
++            } else {
++                openCamera(mTextureView.getWidth(), mTextureView.getHeight());
++            }
+         } else {
+             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+         }
+@@ -266,6 +285,40 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         }
+     }
+ 
++    private boolean isHalPreview() {
++        return getResources().getBoolean(R.bool.config_face_enroll_hal_preview);
++    }
++
++    /** Starts sending the HAL preview surface to {@code listener} once the view is ready. */
++    public void setHalPreviewListener(HalPreviewListener listener) {
++        mHalPreviewListener = listener;
++        if (mHalPreviewSurface != null && listener != null) {
++            listener.onHalPreviewSurface(mHalPreviewSurface);
++        }
++    }
++
++    private void createHalPreviewSurface(SurfaceTexture surfaceTexture, int width, int height) {
++        if (mHalPreviewSurface != null || surfaceTexture == null) {
++            return;
++        }
++        // The texture view is square; the HAL renders a square, already mirrored image.
++        final int size = Math.max(1, Math.min(width, height));
++        surfaceTexture.setDefaultBufferSize(size, size);
++        mHalPreviewSurface = new Surface(surfaceTexture);
++        if (mHalPreviewListener != null) {
++            mHalPreviewListener.onHalPreviewSurface(mHalPreviewSurface);
++        }
++    }
++
++    @Override
++    public void onDestroy() {
++        if (mHalPreviewSurface != null) {
++            mHalPreviewSurface.release();
++            mHalPreviewSurface = null;
++        }
++        super.onDestroy();
++    }
++
+     /**
+      * Opens the camera specified by mCameraId.
+      * @param width  The width of the texture view
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollSidecar.java b/src/com/android/settings/biometrics/face/FaceEnrollSidecar.java
+index b7ba1b5..cd4d80e 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollSidecar.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollSidecar.java
+@@ -20,6 +20,7 @@ import android.app.Activity;
+ import android.app.settings.SettingsEnums;
+ import android.content.Intent;
+ import android.hardware.face.FaceManager;
++import android.view.Surface;
+ 
+ import com.android.settings.biometrics.BiometricEnrollSidecar;
+ 
+@@ -36,11 +37,18 @@ public class FaceEnrollSidecar extends BiometricEnrollSidecar {
+ 
+     private Intent mIntent;
+ 
++    private Surface mPreviewSurface;
++
+     public FaceEnrollSidecar(int[] disabledFeatures, Intent intent) {
+         mDisabledFeatures = Arrays.copyOf(disabledFeatures, disabledFeatures.length);
+         mIntent = intent;
+     }
+ 
++    /** Surface the face HAL draws its preview into, or null. */
++    public void setPreviewSurface(Surface surface) {
++        mPreviewSurface = surface;
++    }
++
+     @Override
+     public void onAttach(Activity activity) {
+         super.onAttach(activity);
+@@ -50,8 +58,14 @@ public class FaceEnrollSidecar extends BiometricEnrollSidecar {
+     @Override
+     public void startEnrollment() {
+         super.startEnrollment();
+-        mFaceUpdater.enroll(mUserId, mToken, mEnrollmentCancel,
+-                mEnrollmentCallback, mDisabledFeatures, mIntent);
++        if (mPreviewSurface != null && mPreviewSurface.isValid()) {
++            mFaceUpdater.enroll(mUserId, mToken, mEnrollmentCancel,
++                    mEnrollmentCallback, mDisabledFeatures, mPreviewSurface,
++                    false /* debugConsent */, mIntent);
++        } else {
++            mFaceUpdater.enroll(mUserId, mToken, mEnrollmentCancel,
++                    mEnrollmentCallback, mDisabledFeatures, mIntent);
++        }
+     }
+ 
+     private FaceManager.EnrollmentCallback mEnrollmentCallback
+-- 
+2.56.0
+
