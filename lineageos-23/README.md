@@ -35,6 +35,7 @@ LineageOS 23.2 plus:
 | davigamer987/hardware_qcom_{display,audio,media} (lineage-23.0-caf-msm8994) | msm8994 CAF HALs ported to Android 16 for the OnePlus 2 |
 | LineageOS-UL/android_hardware_qcom_audio (lineage-21.0) | generic `audio.primary.msm8992`, the HAL the cityman 18.1/20 ROMs use |
 | LineageOS-UL/android_hardware_qcom_gps (lineage-21.0) | last tree with the msm8994 GPS HAL |
+| krazey/ims (pinned commit) | VoLTE: phh's userspace IMS stack (SIP, USIM AKA, IPsec, AMR over RTP) as the MmTel service; its git submodules (rnnoise, webrtc-aec3) are initialised by `apply-patches.sh` |
 
 ## Our patches (`patches/`)
 
@@ -53,6 +54,7 @@ LineageOS 23.2 plus:
 | packages/modules/Bluetooth/0001 | `bluetooth.hfp.wbs.supported` (default true) lets a device turn off wideband speech; cityman sets it to false because mSBC over the PCM path gave no call audio |
 | frameworks/base/0001 | app compaction off by default: the 3.10 kernel has no `process_madvise` |
 | frameworks/base/0002 | cached processes can be killed right after boot (3 GB device) |
+| packages/apps/PhhIms/0001 | feed the uplink AMR encoder one 20 ms frame at a time: this ROM picks `OMX.google.amrnb.encoder`, whose input buffer holds one frame, and a 40 ms microphone read overflowed it and killed phh as soon as a call was answered |
 
 ## Credits
 
@@ -63,3 +65,7 @@ msm8994 HALs and the OnePlus 2 Android 16 tree used as reference;
 GuaiYiHu / xiaomi-classic-dev for the leo/libra kernel backports;
 LineageOS-UL; Android4Lumia950 (djokcho, EpicLPer, j0sh1x and the
 community) for the Lumia 950/950 XL port this work builds on.
+VoLTE: Pierre-Hugues Husson (phhusson) for the IMS stack
+(github.com/phhusson/ims), krazey for the LineageOS 23 fork
+(github.com/krazey/ims), amikhasenko (rnnoise android-build) and ewan-xu
+(AEC3) for its audio submodules.
