@@ -1,0 +1,35 @@
+From d6542e0be93dc1038216828175a6ac9b5b75b8f9 Mon Sep 17 00:00:00 2001
+From: Lorenzo Giannoccaro <giannoccarol@users.noreply.github.com>
+Date: Sat, 7 Nov 2026 10:02:47 +0100
+Subject: [PATCH] Settings: face enroll: paint around the preview circle with
+ the theme background
+
+The square around the circle cutout was always white, which framed the
+preview with a white box on a dark theme.
+
+Change-Id: Ia1a5210b44ce07d9ed503ef21a8ec6162ed12aa3
+---
+ .../biometrics/face/FaceEnrollAnimationDrawable.java       | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
+index 5be7c53..7c32fe8 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
+@@ -66,7 +66,12 @@ public class FaceEnrollAnimationDrawable extends Drawable
+         mListener = listener;
+ 
+         mSquarePaint = new Paint();
+-        mSquarePaint.setColor(Color.WHITE);
++        // Fill around the circle with the window background, not white: on a dark theme a white
++        // square framed the preview.
++        final android.content.res.TypedArray bg = context.obtainStyledAttributes(
++                new int[] {android.R.attr.colorBackground});
++        mSquarePaint.setColor(bg.getColor(0, Color.WHITE));
++        bg.recycle();
+         mSquarePaint.setAntiAlias(true);
+ 
+         mCircleCutoutPaint = new Paint();
+-- 
+2.56.0
+
