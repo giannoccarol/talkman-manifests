@@ -1,0 +1,103 @@
+From 24aab8e72ecce549cf4d5ae694bfb8cea4b8faf2 Mon Sep 17 00:00:00 2001
+From: giannoccarol <giannoccarol@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 18:59:29 +0100
+Subject: [PATCH] audio: start the second voice session for calls on SIM 2
+
+Without the multi voice session extension every call used the first
+voice session (VSID 0x10C01000), which the modem binds to the first
+subscription: on a dual SIM phone calls on SIM 2 connected without
+audio in either direction.
+
+The radio HAL writes the slot of the call in progress to
+vendor.radio.cityman.voice_slot. When it reads 2, voice_start_call
+starts USECASE_VOICE2_CALL (voice2-call mixer path, Voice2 PCM device)
+with VSID 0x10DC1000, and voice_stop_call stops the same use case.
+Single SIM phones never set the property and keep the old behaviour.
+---
+ hal/audio_hw.c |  2 +-
+ hal/voice.c    | 35 +++++++++++++++++++++++++++++++++--
+ 2 files changed, 34 insertions(+), 3 deletions(-)
+
+diff --git a/hal/audio_hw.c b/hal/audio_hw.c
+index d165668..e0d367b 100644
+--- a/hal/audio_hw.c
++++ b/hal/audio_hw.c
+@@ -2219,7 +2219,7 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
+              * Once the voice call done, the HDMI channels can be configured to
+              * max channels of remaining use cases.
+              */
+-            if (usecase->id == USECASE_VOICE_CALL) {
++            if (usecase->id == USECASE_VOICE_CALL || usecase->id == USECASE_VOICE2_CALL) {
+                 ALOGV("%s: voice call is active, no change in HDMI channels",
+                       __func__);
+                 ret = false;
+diff --git a/hal/voice.c b/hal/voice.c
+index 6345a38..86ed3d6 100644
+--- a/hal/voice.c
++++ b/hal/voice.c
+@@ -20,6 +20,8 @@
+ 
+ #include <stdlib.h>
+ #include <errno.h>
++#include <string.h>
++#include <cutils/properties.h>
+ #include <math.h>
+ #include <log/log.h>
+ #include <cutils/str_parms.h>
+@@ -429,6 +431,28 @@ int voice_set_volume(struct audio_device *adev, float volume)
+     return err;
+ }
+ 
++#ifndef VOICE2_VSID
++#define VOICE2_VSID 0x10DC1000
++#endif
++
++/*
++ * Without the multi voice session extension every call used the first voice
++ * session, which the modem binds to the first subscription: on a dual SIM
++ * phone calls on SIM 2 connected without audio. The radio HAL writes the slot
++ * of the call in progress to vendor.radio.cityman.voice_slot; slot 2 starts
++ * the second session (voice2-call path, Voice2 PCM device, VSID 0x10DC1000).
++ * Single SIM phones never set it.
++ */
++static audio_usecase_t single_session_call_usecase = USECASE_VOICE_CALL;
++
++static audio_usecase_t voice_call_usecase_for_slot(void)
++{
++    char slot[PROPERTY_VALUE_MAX];
++
++    property_get("vendor.radio.cityman.voice_slot", slot, "");
++    return strcmp(slot, "2") ? USECASE_VOICE_CALL : USECASE_VOICE2_CALL;
++}
++
+ int voice_start_call(struct audio_device *adev)
+ {
+     int ret = 0;
+@@ -439,7 +463,12 @@ int voice_start_call(struct audio_device *adev)
+ 
+     ret = voice_extn_start_call(adev);
+     if (ret == -ENOSYS) {
+-        ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
++        single_session_call_usecase = voice_call_usecase_for_slot();
++        adev->voice.session[VOICE_SESS_IDX].vsid =
++                single_session_call_usecase == USECASE_VOICE2_CALL ? VOICE2_VSID : VOICE_VSID;
++        ALOGD("%s: %s (vsid 0x%x)", __func__, use_case_table[single_session_call_usecase],
++              adev->voice.session[VOICE_SESS_IDX].vsid);
++        ret = voice_start_usecase(adev, single_session_call_usecase);
+     }
+ 
+     return ret;
+@@ -452,7 +481,9 @@ int voice_stop_call(struct audio_device *adev)
+     adev->voice.in_call = false;
+     ret = voice_extn_stop_call(adev);
+     if (ret == -ENOSYS) {
+-        ret = voice_stop_usecase(adev, USECASE_VOICE_CALL);
++        ret = voice_stop_usecase(adev, single_session_call_usecase);
++        adev->voice.session[VOICE_SESS_IDX].vsid = VOICE_VSID;
++        single_session_call_usecase = USECASE_VOICE_CALL;
+     }
+ 
+     return ret;
+-- 
+2.56.1
+
