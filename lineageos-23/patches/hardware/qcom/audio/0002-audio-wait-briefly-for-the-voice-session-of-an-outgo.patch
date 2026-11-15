@@ -1,0 +1,50 @@
+From 987ba5ddc9a47b264f48ef4f1b071f5bf29f7d8c Mon Sep 17 00:00:00 2001
+From: giannoccarol <giannoccarol@users.noreply.github.com>
+Date: Sun, 15 Nov 2026 23:04:13 +0100
+Subject: [PATCH] audio: wait briefly for the voice session of an outgoing call
+
+An outgoing call can switch the audio mode a few ms before the dial
+reaches the radio HAL, which publishes the voice session on dial: the
+HAL read 0 and started the first session for a call on the second one.
+On dual SIM phones wait up to 500 ms for the session to be published.
+---
+ hal/voice.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/hal/voice.c b/hal/voice.c
+index 86ed3d6..c3ef1d4 100644
+--- a/hal/voice.c
++++ b/hal/voice.c
+@@ -20,6 +20,7 @@
+ 
+ #include <stdlib.h>
+ #include <errno.h>
++#include <unistd.h>
+ #include <string.h>
+ #include <cutils/properties.h>
+ #include <math.h>
+@@ -447,9 +448,20 @@ static audio_usecase_t single_session_call_usecase = USECASE_VOICE_CALL;
+ 
+ static audio_usecase_t voice_call_usecase_for_slot(void)
+ {
+-    char slot[PROPERTY_VALUE_MAX];
++    char slot[PROPERTY_VALUE_MAX], config[PROPERTY_VALUE_MAX];
++    int i;
+ 
+     property_get("vendor.radio.cityman.voice_slot", slot, "");
++    /*
++     * An outgoing call can switch the audio mode a few ms before the dial
++     * reaches the radio HAL, which publishes the voice session on dial: on a
++     * dual SIM phone wait for it briefly instead of taking session 1.
++     */
++    property_get("persist.radio.multisim.config", config, "");
++    for (i = 0; i < 20 && !strcmp(config, "dsds") && (!slot[0] || !strcmp(slot, "0")); i++) {
++        usleep(25 * 1000);
++        property_get("vendor.radio.cityman.voice_slot", slot, "");
++    }
+     return strcmp(slot, "2") ? USECASE_VOICE_CALL : USECASE_VOICE2_CALL;
+ }
+ 
+-- 
+2.56.1
+
